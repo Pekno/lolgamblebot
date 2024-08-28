@@ -1,0 +1,5 @@
+data
+.vscode
+node_modules
+build
+pino-logger.log
