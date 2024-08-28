@@ -221,5 +221,8 @@ export class Bot{
                 CONFIG.RIOT_API_LIMIT_BY_MINUTES
             );
         this._opggApi = new OPGGApi();
+        if (!fs.existsSync(CONFIG.SAVED_DATA_PATH)){
+            fs.mkdirSync(CONFIG.SAVED_DATA_PATH, { recursive: true });
+        }
     }
 }
