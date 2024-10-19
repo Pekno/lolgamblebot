@@ -1,5 +1,5 @@
-export enum MainRegion{
-    AMERCICAS = "americas",
-    ASIA = "asia",
-    EUROPE = "europe"
+export enum MainRegion {
+	AMERCICAS = 'americas',
+	ASIA = 'asia',
+	EUROPE = 'europe',
 }

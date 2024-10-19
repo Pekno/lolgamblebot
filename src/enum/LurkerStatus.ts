@@ -1,5 +1,5 @@
-export enum LurkerStatus{
-    RUNNING,
-    CREATED,
-    STOPPED
+export enum LurkerStatus {
+	RUNNING,
+	CREATED,
+	STOPPED,
 }

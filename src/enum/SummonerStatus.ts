@@ -1,4 +1,4 @@
-export enum SummonerStatus{
-    PLAYING,
-    WAITING
+export enum SummonerStatus {
+	PLAYING,
+	WAITING,
 }
