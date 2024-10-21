@@ -3,7 +3,7 @@ import axios, {
 	AxiosResponse,
 	RawAxiosRequestHeaders,
 } from 'axios';
-import { Logger } from '../services/PinoLogger';
+import { Logger } from '../services/LoggerService';
 import { ApiRequest } from '../model/ApiRequest';
 
 export class MainApi {
@@ -43,7 +43,7 @@ export class MainApi {
 	public call(url: string, options?: any): Promise<AxiosResponse<any, any>> {
 		const encodedUrl = encodeURI(url);
 		return new Promise((resolve, reject) => {
-			Logger.debug(`${this.apiName} : ADDED to queue "${encodedUrl}"`);
+			Logger.info(`${this.apiName} : ADDED to queue "${encodedUrl}"`);
 			this.queue.push({ url: encodedUrl, options, resolve, reject });
 		});
 	}
@@ -60,7 +60,7 @@ export class MainApi {
 		this.currentRequestCount++;
 
 		try {
-			Logger.debug(
+			Logger.info(
 				`${this.apiName} : PROCESS from queue "${url}" -> ${this.currentRequestCount}/${this.maxRequestsPerMinute}`
 			);
 			const response = await this.axiosInstance.get(url, options);

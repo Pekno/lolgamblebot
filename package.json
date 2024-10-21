@@ -1,10 +1,13 @@
 {
-  "name": "lolgamblebot",
-  "version": "1.0.0",
+  "name": "lolgamble-bot",
+  "version": "2.0.0",
   "main": "./src/main/main.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc --build"
+    "build": "tsc --build && xcopy /E /I src\\locales dist\\locales",
+    "lint": "eslint 'src/**/*.{js,ts}'",
+    "lint:fix": "eslint 'src/**/*.{js,ts}' --fix",
+    "format": "prettier --write 'src/**/*.{js,ts,json,css,md}'"
   },
   "author": "",
   "license": "ISC",
@@ -13,13 +16,15 @@
     "axios": "^1.7.2",
     "discord.js": "^14.15.3",
     "fs": "^0.0.1-security",
-    "pino": "^9.3.1",
-    "pino-pretty": "^11.2.1",
+    "i18n": "^0.15.1",
+    "winston": "^3.15.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "typescript": "^5.5.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",
     "@types/eslint__js": "^8.42.3",
+    "@types/i18n": "^0.13.12",
     "@typescript-eslint/eslint-plugin": "^8.7.0",
     "@typescript-eslint/parser": "^8.10.0",
     "eslint": "^9.11.1",

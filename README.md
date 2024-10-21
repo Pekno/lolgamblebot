@@ -6,6 +6,15 @@ League of Legends Gamble Bot is a Discord bot that lets users track Summoners an
 
 ## Features
 
+### An Embed to show on going and ended games, with bet lock system.
+![Player Embed](bet.png)
+
+### MP to track what you won / lost with linked game.
+![Profile Embed](results.png)
+
+### A Scoreboard to track who is ahead on the server.
+![Generate Modal](scoreboard.png)
+
 - Track League of Legends Summoners from different regions.
 - Bet virtual tokens on the outcome of games involving tracked Summoners.
 - Receive notifications when a tracked Summoner enters a game.
@@ -31,6 +40,7 @@ Below is a table of commands available for the Discord Betting Game Bot:
 To configure LoL Gamble Bot, you need to set the following environment variables:
 
 1. **Required Environment Variables:**
+  - `LOCALE`: The [ISO 639 language](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes#:~:text=ISO%20639%20is%20a%20standardized,(sets%202%E2%80%935).) code of bot default language.
    - `DISCORD_ID`: Your Discord application ID.
    - `DISCORD_TOKEN`: Your Discord bot token.
    - `RIOT_API_KEY`: Your Riot API key.
@@ -45,3 +55,10 @@ To configure LoL Gamble Bot, you need to set the following environment variables
    - `LOG_LEVEL`: Defines the logging level of the Bot. Default is `warning`.
 
 A Docker image is also available via [Docker Hub](https://hub.docker.com/r/pekno/lolgamblebot).
+
+## Ideas / To do
+
+- [ ] Add locale support
+- [ ] Make one log file per Lurker/Guild
+- [ ] Add one combined error log
+- [ ] Make all response defered

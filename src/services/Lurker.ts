@@ -15,7 +15,7 @@ import { Summoner } from '../model/Summoner';
 import { Side, sideToShortText } from '../enum/Side';
 import { SpecificRegion } from '../enum/SpecificRegion';
 import { LurkerStatus } from '../enum/LurkerStatus';
-import { Logger } from './PinoLogger';
+import { Logger } from './LoggerService';
 import { gameModeToType } from '../enum/GameType';
 
 export class Lurker {
@@ -55,8 +55,8 @@ export class Lurker {
 		Logger.info(
 			`Lurker ${this.guildId} : GameId ${wager.gameData.platformId}_${wager.gameId} EVENT - "${event}" triggered`
 		);
-		this.save();
 		await listener(wager);
+		this.save();
 	};
 
 	getWager = (gameId: number): Wager | undefined => {
@@ -88,9 +88,12 @@ export class Lurker {
 		summonerName: string | null,
 		summonerRegion: SpecificRegion,
 		byPassSave: boolean = false
-	): Promise<Summoner> => {
+	) => {
 		if (!summonerName) throw new Error('No summoner name given');
-		let summ = this._riotApi.cleanupSummonerName(summonerName, summonerRegion);
+		const summ = this._riotApi.cleanupSummonerName(
+			summonerName,
+			summonerRegion
+		);
 		const exactSumm = this._summoners.findIndex(
 			(s) =>
 				s.gameName === summ.gameName &&
@@ -98,27 +101,37 @@ export class Lurker {
 				s.region === summ.region
 		);
 		if (exactSumm !== -1) throw new Error('Summoner already added');
-		summ = await this._riotApi.getSummonerInfo(summ, summonerRegion);
-		if (!summ) throw new Error('Can`t retrive summoner from Riot API');
-		const compSumm = await this._opggApi.getSummonerInfo(summ);
+		const summFromOnline = await this._riotApi.getSummonerInfo(
+			summ,
+			summonerRegion
+		);
+		if (!summFromOnline) {
+			this.removeSummoner(summonerName, summonerRegion);
+			Logger.info(
+				`Lurker ${this.guildId} : Can't retrive summoner from Riot API, deleted if already existed`
+			);
+			return;
+		}
+		const compSumm = await this._opggApi.getSummonerInfo(summFromOnline);
 		if (!compSumm) throw new Error('Can`t retrive summoner from OPGG API');
 		Logger.info(
 			`Lurker ${this.guildId} : Adding ${compSumm.wholeGameName} to checkList`
 		);
 		this._summoners.push(compSumm);
 		if (!byPassSave) this.save();
-		return compSumm;
 	};
 
 	addSummoners = async (
 		summoners: { wholeGameName: string; region: SpecificRegion }[],
 		byPassSave: boolean = false
-	): Promise<Summoner[]> => {
-		return Promise.all(
-			summoners.map((snms) =>
-				this.addSummoner(snms.wholeGameName, snms.region, byPassSave)
-			)
-		);
+	) => {
+		for (const summoner of summoners) {
+			await this.addSummoner(
+				summoner.wholeGameName,
+				summoner.region,
+				byPassSave
+			);
+		}
 	};
 
 	getSummoners = (): string => {
@@ -202,8 +215,12 @@ export class Lurker {
 				s.tagLine === summ.tagLine &&
 				s.region === summ.region
 		);
-		if (exactSumm === -1)
-			throw new Error('Summoner is not present in the check list');
+		if (exactSumm === -1) {
+			Logger.info(
+				`Lurker ${this.guildId} : Summoner ${summ.wholeGameName} is not present in the check list`
+			);
+			return;
+		}
 		this._summoners.splice(exactSumm, 1);
 		Logger.info(
 			`Lurker ${this.guildId} : Removing ${summ.wholeGameName} to checkList`
@@ -214,7 +231,7 @@ export class Lurker {
 	checkWagersGame = async () => {
 		if (!this.channelId) return;
 		if (this.status !== LurkerStatus.RUNNING) return;
-		Logger.debug(
+		Logger.info(
 			`Lurker ${this.guildId} : Checking if one of ${this._wagerList.size} wagers ended`
 		);
 		for (const [, wager] of this._wagerList) {
@@ -237,15 +254,16 @@ export class Lurker {
 		if (!this.channelId) return;
 		if (this.status !== LurkerStatus.RUNNING) return;
 		const notInGameSummoner = this._summoners.filter((s) => !s.currentWager);
-		Logger.debug(
+		Logger.info(
 			`Lurker ${this.guildId} : Checking if one of ${notInGameSummoner.length} summoners that are not already in games are playing`
 		);
 		for (const summoner of notInGameSummoner) {
 			try {
 				const currentGame = await this._riotApi.getCurrentGame(summoner);
 				if (currentGame) {
-					Logger.debug(`Lurker ${this.guildId} :`);
-					Logger.debug(currentGame);
+					Logger.info(
+						`Lurker ${this.guildId} : Game Found => ${currentGame.gameId}`
+					);
 
 					// Skip this game if already bet is created
 					const alreadyListedWager = this._wagerList.get(currentGame.gameId);
@@ -267,11 +285,10 @@ export class Lurker {
 						await this.dispatch('lockedWager', newWager);
 					});
 
-					Logger.debug(`Lurker ${this.guildId} :`);
-					Logger.debug(newWager);
+					Logger.info(`Lurker ${this.guildId} :`);
 				}
-			} catch (e) {
-				Logger.error(e);
+			} catch (e: any) {
+				Logger.error(e, e.stack);
 			}
 		}
 	};
@@ -313,6 +330,7 @@ export class Lurker {
 	};
 
 	restoreWager = async (wagerSave: WagerSave) => {
+		if (!wagerSave?.messageId) return;
 		const now = Date.now();
 		const newWager = new Wager({
 			messageId: wagerSave.messageId,
@@ -363,18 +381,21 @@ export class Lurker {
 		if (fromSave) {
 			Logger.info(`Lurker ${this.guildId} : Restoring lurker data from save`);
 			await this.addSummoners(fromSave.summoners, true);
-			for (const score of fromSave.scoreboard) {
-				this.scoreBoard.set(score.userId, score.amount);
-			}
-			for (const wagerSave of fromSave.inProgressWagers) {
-				this.restoreWager(wagerSave);
-			}
+			if (fromSave?.scoreboard)
+				for (const score of fromSave.scoreboard) {
+					this.scoreBoard.set(score.userId, score.amount);
+				}
+			if (fromSave?.inProgressWagers)
+				for (const wagerSave of fromSave.inProgressWagers) {
+					await this.restoreWager(wagerSave);
+				}
 		}
 
-		Logger.debug(`Lurker ${this.guildId} :`);
-		Logger.debug(this._summoners);
+		Logger.info(`Lurker ${this.guildId} :`);
+		Logger.info(this._summoners.map((s) => s.wholeGameName).join(', '));
 		await this.checkSummonersGame();
 		setInterval(async () => {
+			Logger.info(`Lurker ${this.guildId} : Scheduled Check`);
 			await this.checkSummonersGame();
 			await this.checkWagersGame();
 		}, 1000 * CONFIG.CHECK_INTERVAL);
@@ -399,26 +420,27 @@ export class Lurker {
 					side: bettor.side,
 				});
 			}
-			wagers.push(
-				new WagerSave({
-					messageId: wager.message.id,
-					bettors: bettors,
-					gameData: {
-						gameId: wager.gameId,
-						platformId: wager.gameData.platformId,
-						region: wager.region,
-						gameMode: wager.gameData.gameMode,
-						gameStartTime: wager.gameData.gameStartTime,
-					},
-					participants: wager.participants.map((p) => {
-						return {
-							puuid: p.summoner.puuid,
-							teamId: p.side,
-							championId: p.champion.id,
-						};
-					}),
-				})
-			);
+			if (wager?.message?.id)
+				wagers.push(
+					new WagerSave({
+						messageId: wager?.message?.id,
+						bettors: bettors,
+						gameData: {
+							gameId: wager.gameId,
+							platformId: wager.gameData.platformId,
+							region: wager.region,
+							gameMode: wager.gameData.gameMode,
+							gameStartTime: wager.gameData.gameStartTime,
+						},
+						participants: wager.participants.map((p) => {
+							return {
+								puuid: p.summoner.puuid,
+								teamId: p.side,
+								championId: p.champion.id,
+							};
+						}),
+					})
+				);
 		}
 		const save = new Save({
 			guildId: this.guildId,

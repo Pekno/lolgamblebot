@@ -1,13 +1,43 @@
 import { SpecificRegion } from '../enum/SpecificRegion';
-import { Command, CommandList, CommandOption } from '../model/DiscordModels';
+import {
+	ButtonCommand,
+	Command,
+	CommandList,
+	CommandOption,
+	ModalSubmitCommand,
+} from '../model/DiscordModels';
 import { Bot } from '../services/Bot';
 import { Lurker } from '../services/Lurker';
 import {
 	Client,
 	ApplicationCommandOptionType,
 	ChatInputCommandInteraction,
+	ModalSubmitInteraction,
+	ButtonInteraction,
+	TextInputStyle,
+	ActionRowBuilder,
+	TextInputBuilder,
+	ModalBuilder,
 } from 'discord.js';
-import { Logger } from '../services/PinoLogger';
+import path from 'path';
+import i18n from 'i18n';
+import { Logger } from '../services/LoggerService';
+import { CONFIG } from '../config/config';
+import { LocaleError } from '../model/LocalError';
+import { Side, sideToText } from '../enum/Side';
+
+i18n.configure({
+	locales: CONFIG.AVAILABLE_LOCAL,
+	directory: path.resolve(__dirname, '../locales'),
+	defaultLocale: 'en',
+	objectNotation: true,
+});
+if (!CONFIG.AVAILABLE_LOCAL.includes(CONFIG.LOCALE.toLowerCase()))
+	throw new LocaleError('error._default', {
+		message: `LOCALE env var not recognized`,
+	});
+i18n.setLocale(CONFIG.LOCALE.toLowerCase());
+Logger.info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
 
 const regionOption = Object.keys(SpecificRegion).map((v, i) => {
 	return {
@@ -23,6 +53,7 @@ commandsList.push(
 		description: 'Tell the bot to start and notify in this channel',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
+			client: Client,
 			lurker: Lurker
 		) => {
 			await lurker.start(interaction.channelId);
@@ -36,6 +67,7 @@ commandsList.push(
 		description: 'Tell the bot to stop notification in this channel',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
+			client: Client,
 			lurker: Lurker
 		) => {
 			await lurker.stop();
@@ -66,6 +98,7 @@ commandsList.push(
 		],
 		execute: async (
 			interaction: ChatInputCommandInteraction,
+			client: Client,
 			lurker: Lurker
 		) => {
 			const summonerName = interaction.options.getString('summoner_name');
@@ -98,6 +131,7 @@ commandsList.push(
 		],
 		execute: async (
 			interaction: ChatInputCommandInteraction,
+			client: Client,
 			lurker: Lurker
 		) => {
 			const summonerName = interaction.options.getString('summoner_name');
@@ -115,6 +149,7 @@ commandsList.push(
 		description: 'Get the summoners from the check list',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
+			client: Client,
 			lurker: Lurker
 		) => {
 			const summonerText = lurker.getSummoners();
@@ -128,8 +163,8 @@ commandsList.push(
 		description: 'Get the scoreboard from the bot',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
-			lurker: Lurker,
-			client: Client
+			client: Client,
+			lurker: Lurker
 		) => {
 			await interaction.reply({
 				embeds: [await lurker.buildEmbedScoreboard(client)],
@@ -137,8 +172,78 @@ commandsList.push(
 		},
 	})
 );
+commandsList.push(
+	new ButtonCommand({
+		name: 'button_bet',
+		execute: async (
+			interaction: ButtonInteraction,
+			client: Client,
+			lurker: Lurker,
+			byPassParameters: {
+				side: Side;
+				gameId: number;
+				userId: string;
+			}
+		) => {
+			if (!byPassParameters?.userId)
+				throw new Error('Cannot find userId on this server');
+			const currentScore = lurker.checkScore(byPassParameters.userId);
+
+			const modal = new ModalBuilder()
+				.setCustomId(
+					`bet_modal;${byPassParameters.side};${byPassParameters.gameId};${currentScore}`
+				)
+				.setTitle(`Wager on ${sideToText(byPassParameters.side)}`);
+
+			const favoriteColorInput = new TextInputBuilder()
+				.setCustomId('amount')
+				.setLabel("What's the amount you want to wager ?")
+				.setPlaceholder(`You currently have ${currentScore} ${CONFIG.CURRENCY}`)
+				.setRequired(true)
+				.setStyle(TextInputStyle.Short);
+
+			const firstActionRow =
+				new ActionRowBuilder<TextInputBuilder>().addComponents(
+					favoriteColorInput
+				);
+			modal.addComponents(firstActionRow);
+
+			await interaction.showModal(modal);
+		},
+	})
+);
+commandsList.push(
+	new ModalSubmitCommand({
+		name: 'submit_bet_modal',
+		execute: async (
+			interaction: ModalSubmitInteraction,
+			client: Client,
+			lurker: Lurker,
+			byPassParameters: {
+				side: Side;
+				gameId: number;
+				userId: string;
+				amount: number;
+			}
+		) => {
+			if (Number.isNaN(byPassParameters?.amount))
+				throw new Error(`${byPassParameters.amount} is not a correct number`);
+			if (byPassParameters?.amount <= 0)
+				throw new Error(`${byPassParameters.amount} is not > 0`);
+			if (!byPassParameters?.userId)
+				throw new Error('Cannot find userId on this server');
+			const wagerText = await lurker.setBet(
+				byPassParameters.gameId,
+				byPassParameters.userId,
+				byPassParameters.amount,
+				byPassParameters.side
+			);
+			interaction.reply({ content: wagerText, ephemeral: true });
+		},
+	})
+);
 
 const bot = new Bot();
-bot.start(commandsList).catch((e) => {
-	Logger.error(e);
+bot.start(commandsList).catch((e: any) => {
+	Logger.error(e, e.stack);
 });

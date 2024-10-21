@@ -1,67 +1,120 @@
 import {
 	APIApplicationCommandOptionChoice,
 	ApplicationCommandOptionType,
+	AutocompleteInteraction,
+	BaseInteraction,
+	ButtonInteraction,
+	CacheType,
 	ChatInputCommandInteraction,
 	Client,
+	CommandInteraction,
+	ModalSubmitInteraction,
 } from 'discord.js';
+import { LocaleError } from './LocalError';
 import { Lurker } from '../services/Lurker';
 
+export type AnyCommandInteraction =
+	| ChatInputCommandInteraction<CacheType>
+	| AutocompleteInteraction<CacheType>
+	| ModalSubmitInteraction<CacheType>
+	| ButtonInteraction<CacheType>;
+
 export class CommandList {
-	private _commands: Map<string, Command> = new Map<string, Command>();
+	private _commands: Map<string, Command<AnyCommandInteraction>> = new Map();
+	private _alias: Map<string, string> = new Map();
 
-	set = (commands: Command[]) => {
-		for (const command of commands) {
-			this.push(command);
-		}
-	};
-
-	push = (command: Command) => {
+	push = (command: Command<AnyCommandInteraction>) => {
 		this._commands.set(command.name, command);
+		if (command.clickAlias) this._alias.set(command.clickAlias, command.name);
 	};
 
 	execute = (
-		interaction: ChatInputCommandInteraction,
+		interaction: BaseInteraction,
+		client: Client,
 		lurker: Lurker,
-		client: Client
+		commandName?: string,
+		byPassParameters?: any
 	): Promise<void> => {
-		if (!interaction?.commandName) throw new Error('No command name given');
-		const command = this._commands.get(interaction.commandName);
-		if (!command) throw new Error('Command not found');
+		const cmdName =
+			commandName ?? (interaction as CommandInteraction).commandName;
+		if (!cmdName) throw new LocaleError('error.discord.no_command_name');
+		// Try to get alias
+		const alias = this._alias.get(cmdName);
+		// If no command found, try with alias
+		const command =
+			this._commands.get(cmdName) ?? (alias ? this._commands.get(alias) : null);
+		if (!command) throw new LocaleError('error.discord.command_not_found');
 
-		return command.execute(interaction, lurker, client);
+		return command.execute(interaction, client, lurker, byPassParameters);
 	};
 
-	build = (): any => {
+	build = (): {
+		name: string;
+		description: string;
+		options: CommandOption[];
+	}[] => {
 		const res = [];
 		for (const [, value] of this._commands) {
-			res.push({
-				name: value.name,
-				description: value.description,
-				options: value.options,
-			});
+			if (value.registerPredicate())
+				res.push({
+					name: value.name,
+					description: value.description,
+					options: value.options,
+				});
 		}
 		return res;
 	};
 }
 
-export class Command {
+export class Command<T extends AnyCommandInteraction> {
 	name: string;
+	clickAlias: string;
 	description: string;
 	options: CommandOption[];
 	execute: (
-		interaction: ChatInputCommandInteraction,
+		interaction: any,
+		client: Client,
 		lurker: Lurker,
-		client: Client
+		byPassParameters?: any
 	) => Promise<void>;
 
-	public constructor(init?: Partial<Command>) {
+	registerPredicate: () => boolean;
+
+	public constructor(init?: Partial<Command<T>>) {
+		this.registerPredicate = () => true;
 		Object.assign(this, init);
+	}
+}
+
+export class ModalSubmitCommand extends Command<
+	ModalSubmitInteraction<CacheType>
+> {
+	constructor(init?: Partial<ModalSubmitCommand>) {
+		super(init);
+		this.registerPredicate = () => false;
+	}
+}
+
+export class ButtonCommand extends Command<ButtonInteraction<CacheType>> {
+	constructor(init?: Partial<ButtonCommand>) {
+		super(init);
+		this.registerPredicate = () => false;
+	}
+}
+
+export class AutoCompleteCommand extends Command<
+	AutocompleteInteraction<CacheType>
+> {
+	constructor(init?: Partial<AutoCompleteCommand>) {
+		super(init);
+		this.registerPredicate = () => false;
 	}
 }
 
 export class CommandOption {
 	name: string;
 	description: string;
+	autocomplete: boolean = false;
 	required: boolean = false;
 	type: ApplicationCommandOptionType;
 	choices: APIApplicationCommandOptionChoice[];

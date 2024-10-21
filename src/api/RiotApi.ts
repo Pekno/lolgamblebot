@@ -25,7 +25,7 @@ export class RiotAPI extends MainApi {
 	getSummonerInfo = async (
 		summ: Summoner,
 		summonerRegion: SpecificRegion
-	): Promise<Summoner> => {
+	): Promise<Summoner | null> => {
 		try {
 			if (!summ.gameName || !summ.tagLine || !summ.region)
 				throw new Error("Summoner's Name, Tag or Region is missing");
@@ -38,9 +38,8 @@ export class RiotAPI extends MainApi {
 			summ.tagLine = response.data.tagLine;
 			return summ;
 		} catch (error: any) {
-			// If status code is 404 in API, then summoner is not in game
-			if (error.response?.data?.status?.status_code === 404)
-				throw new Error(error.response?.data?.status?.message);
+			// If status code is 404 in API, then summoner summoner doesn't exist "Data not found - No results found for player with riot id"
+			if (error.response?.data?.status?.status_code === 404) return null;
 			throw new Error(error.message);
 		}
 	};

@@ -1,14 +1,10 @@
 import {
-	ActionRowBuilder,
 	Client,
 	Events,
 	GatewayIntentBits,
-	ModalBuilder,
 	REST,
 	Routes,
 	TextChannel,
-	TextInputBuilder,
-	TextInputStyle,
 } from 'discord.js';
 import { CommandList } from '../model/DiscordModels';
 import { Lurker } from './Lurker';
@@ -20,7 +16,8 @@ import path from 'path';
 import { Save } from '../model/Save';
 import { RiotChampion } from '../model/RiotModels';
 import { Side, sideToText } from '../enum/Side';
-import { Logger } from './PinoLogger';
+import { Logger } from './LoggerService';
+import { LocaleError } from '../model/LocalError';
 
 export class Bot {
 	private _lurkers: Map<string, Lurker> = new Map<string, Lurker>();
@@ -41,92 +38,48 @@ export class Bot {
 				body: commandList.build(),
 			});
 			Logger.info('Bot : Successfully loaded application (/) commands.');
-		} catch (e) {
-			Logger.error(e);
+		} catch (e: any) {
+			Logger.error(e, e.stack);
 		}
 
 		this._client.on(Events.InteractionCreate, async (interaction) => {
-			if (!interaction) throw new Error('Cannot find interaction');
-			if (!interaction.isModalSubmit()) return;
+			if (!interaction) throw new LocaleError('error.discord.no_interaction');
+			if (!interaction.guildId)
+				throw new LocaleError('error.discord.no_guild_id');
 			try {
-				const infos = interaction.customId.split('_');
-				const side = parseInt(infos[0]) as Side;
-				const gameId = parseInt(infos[1]);
-				const userId = infos[2];
-				const amountText = interaction.fields.getTextInputValue('amount');
-				const amount = parseInt(amountText);
-				if (Number.isNaN(amount))
-					throw new Error(`${amountText} is not a correct number`);
-				if (amount <= 0) throw new Error(`${amountText} is not > 0`);
-				if (!userId) throw new Error('Cannot find userId on this server');
-				const specificLurker = this.getLuker(interaction.guildId);
-				const wagerText = await specificLurker.setBet(
-					gameId,
-					userId,
-					amount,
-					side
-				);
-
-				interaction.reply({ content: wagerText, ephemeral: true });
-			} catch (e: any) {
-				try {
-					await interaction.reply({ content: e.message, ephemeral: true });
-				} catch {
-					Logger.error(e);
-				}
-				Logger.error(e);
-			}
-		});
-
-		this._client.on(Events.InteractionCreate, async (interaction) => {
-			if (!interaction) throw new Error('Cannot find interaction');
-			if (!interaction.isButton()) return;
-			try {
-				const infos = interaction.customId.split('_');
-				const side = infos[0] === 'redside' ? Side.RED : Side.BLUE;
-				const gameId = infos[1];
-				const userId = interaction.member?.user.id;
-
-				if (!userId) throw new Error('Cannot find userId on this server');
-				const specificLurker = this.getLuker(interaction.guildId);
-				const currentScore = specificLurker.checkScore(userId);
-
-				const modal = new ModalBuilder()
-					.setCustomId(
-						`${side}_${gameId}_${interaction.member?.user.id}_${currentScore}_modal`
+				let action;
+				let payload;
+				if (interaction.isAutocomplete()) {
+					action = `${interaction.commandName}_autocomplete`;
+				} else if (interaction.isStringSelectMenu()) {
+					action = interaction.customId.replace('suno_optionselect_', '');
+					payload = interaction.values[0];
+				} else if (interaction.isButton()) {
+					if (
+						interaction.customId === 'prev' ||
+						interaction.customId === 'next'
 					)
-					.setTitle(`Wager on ${sideToText(side)}`);
-
-				const favoriteColorInput = new TextInputBuilder()
-					.setCustomId('amount')
-					.setLabel("What's the amount you want to wager ?")
-					.setPlaceholder(
-						`You currently have ${currentScore} ${CONFIG.CURRENCY}`
-					)
-					.setRequired(true)
-					.setStyle(TextInputStyle.Short);
-
-				const firstActionRow =
-					new ActionRowBuilder<TextInputBuilder>().addComponents(
-						favoriteColorInput
-					);
-				modal.addComponents(firstActionRow);
-
-				await interaction.showModal(modal);
-			} catch (e: any) {
-				try {
-					await interaction.reply({ content: e.message, ephemeral: true });
-				} catch {
-					Logger.error(e);
+						return;
+					const [command, side, gameId] = interaction.customId.split(';');
+					action = command;
+					payload = {
+						side: parseInt(side) as Side,
+						gameId: parseInt(gameId),
+						userId: interaction.member?.user.id,
+					};
+				} else if (interaction.isModalSubmit()) {
+					const [command, side, gameId] = interaction.customId.split(';');
+					action = `submit_${command}`;
+					payload = {
+						side: parseInt(side) as Side,
+						gameId: parseInt(gameId),
+						userId: interaction.member?.user.id,
+						amount: parseInt(interaction.fields.getTextInputValue('amount')),
+					};
+				} else if (!interaction.isChatInputCommand()) {
+					return;
 				}
-				Logger.error(e);
-			}
-		});
-
-		this._client.on(Events.InteractionCreate, async (interaction) => {
-			if (!interaction) throw new Error('Cannot find interaction');
-			if (!interaction.isChatInputCommand()) return;
-			try {
+				// Check lurker
 				if (!interaction.guildId)
 					throw new Error('Command was not sent from a server');
 				let specificLurker = this._lurkers.get(interaction.guildId);
@@ -139,17 +92,31 @@ export class Bot {
 				}
 				if (!specificLurker)
 					throw new Error('Could not find a Lurker available for this server');
-				await commandList.execute(interaction, specificLurker, this._client);
+
+				await commandList.execute(
+					interaction,
+					this._client,
+					specificLurker,
+					action,
+					payload
+				);
 			} catch (e: any) {
-				try {
-					await interaction.reply({ content: e.message, ephemeral: true });
-				} catch {
-					Logger.error(e);
+				Logger.error(e, e.stack);
+				if (e.code !== 10062) {
+					if ('deferred' in interaction && interaction.deferred) {
+						await interaction.editReply({
+							content: `⚠️ __${e.message.substring(0, 1_500)}__ ⚠️`,
+						});
+					} else {
+						if ('reply' in interaction)
+							await interaction.reply({
+								content: `⚠️ __${e.message.substring(0, 1_500)}__ ⚠️`,
+								ephemeral: true,
+							});
+					}
 				}
-				Logger.error(e);
 			}
 		});
-
 		await this._client.login(CONFIG.DISCORD_TOKEN);
 	};
 
@@ -165,9 +132,13 @@ export class Bot {
 
 		// Recreate Lurkers from save datafile
 		const files = fs.readdirSync(CONFIG.SAVED_DATA_PATH);
-		for (const file of files.filter(
+		const filteredFiles = files.filter(
 			(file) => path.extname(file).toLowerCase() === '.json'
-		)) {
+		);
+		Logger.info(
+			`Bot : Restoring ${filteredFiles.length} lurkers from save file`
+		);
+		for (const file of filteredFiles) {
 			await this.restore(file.replace('.json', ''));
 		}
 	};
@@ -179,14 +150,6 @@ export class Bot {
 		const lurker = this.createAndBindLurker(data.guildId);
 		this._lurkers.set(data.guildId, lurker);
 		await lurker.start(data.channelId, data);
-	};
-
-	private getLuker = (guildId: string | null): Lurker => {
-		if (!guildId) throw new Error('Command was not sent from a server');
-		const specificLurker = this._lurkers.get(guildId);
-		if (!specificLurker)
-			throw new Error('Could not find a Lurker available for this server');
-		return specificLurker;
 	};
 
 	private getChannel = async (lurker: Lurker): Promise<TextChannel | null> => {
@@ -220,6 +183,7 @@ export class Bot {
 		lurker.on('restoreWager', async (wager) => {
 			const channel = await this.getChannel(lurker);
 			if (!channel) return;
+			if (!wager.messageId) return;
 
 			wager.message = await channel.messages.fetch(wager.messageId);
 			if (!wager.message) return;
