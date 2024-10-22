@@ -1,0 +1,110 @@
+{
+	"error": {
+		"opgg": {
+			"no_opggid": "Die OPGG-ID konnte auf der angegebenen Webseite nicht gefunden werden. Bitte stellen Sie sicher, dass die Webseite die richtigen Beschwörerinformationen enthält.",
+			"no_summoner": "Die Beschwörerdetails konnten nicht von der OPGG-API abgerufen werden. Dies könnte an Netzwerkproblemen oder einem falschen Beschwörernamen liegen.",
+			"no_champions_list": "Die Champion-Liste konnte nicht von OPGG abgerufen werden. Dies kann auf eine Dienstunterbrechung oder ein Problem mit der API-Anfrage hinweisen."
+		},
+		"riot": {
+			"no_api_key": "Der RIOT-API-Schlüssel ist nicht definiert oder fehlt. Bitte überprüfen Sie, ob ein gültiger API-Schlüssel in der Umgebung konfiguriert ist.",
+			"no_summoner_match": "Der angegebene Beschwörername stimmt nicht mit dem Format <gameName>#<tagLine> überein. Bitte überprüfen Sie die Eingabe.",
+			"missing_summoner_field": "Erforderliche Beschwörerinformationen sind unvollständig. Stellen Sie sicher, dass der Name, das Tag oder die Region des Beschwörers korrekt angegeben sind.",
+			"no_region_or_gameid": "Entweder fehlt die Region oder die Spiel-ID. Beide sind erforderlich, um die Anfrage fortzusetzen.",
+			"missing_summorner_puuid": "Die PUUID des Beschwörers ist in diesem Stadium des Prozesses nicht definiert. Stellen Sie sicher, dass die Beschwörerdetails korrekt abgerufen wurden."
+		},
+		"discord": {
+			"no_command_name": "Es wurde kein Befehlsname angegeben. Bitte geben Sie einen Befehl an.",
+			"command_not_found": "Der angeforderte Befehl konnte nicht gefunden werden. Bitte stellen Sie sicher, dass der Befehlsname korrekt ist.",
+			"no_configured_command": "Es sind keine Discord-Befehle konfiguriert. Bitte konfigurieren Sie mindestens einen Befehl.",
+			"no_discord_token": "Das Discord-Token ist nicht konfiguriert. Bitte richten Sie Ihr Discord-Bot-Token ein.",
+			"no_discord_id": "Die Discord-ID ist nicht konfiguriert. Bitte geben Sie eine gültige Discord-ID an.",
+			"no_interaction": "Die angegebene Interaktion konnte nicht gefunden werden. Bitte stellen Sie sicher, dass sie gültig ist.",
+			"no_guild_id": "Der Befehl wurde nicht von einem Server gesendet. Bitte stellen Sie sicher, dass Sie sich in einem Discord-Server befinden.",
+			"wrong_userId": "Die userId konnte auf diesem Server nicht gefunden werden."
+		},
+		"lurker": {
+			"no_server_lurker": "Für den angegebenen Server wurde kein Lurker-Bot gefunden. Bitte überprüfen Sie die Serverkonfiguration oder Verfügbarkeit.",
+			"no_listener": "Der Listener-Dienst ist für diesen Prozess nicht registriert oder initialisiert. Stellen Sie sicher, dass der Listener ordnungsgemäß eingerichtet ist.",
+			"no_wage_on_gameId": "Für die angegebene GameId konnte kein Wetteinsatz gefunden werden. Bitte prüfen Sie, ob eine Wette für dieses Spiel platziert wurde.",
+			"cannot_wager": "Dieser Benutzer ist nicht berechtigt, eine Wette zu platzieren. Überprüfen Sie die Berechtigungen oder den Status des Benutzerkontos.",
+			"cannot_wager_amount": "Der Wetteinsatz übersteigt das verfügbare Guthaben des Benutzers. Bitte setzen Sie einen Betrag innerhalb des Limits.",
+			"wrong_amount": "Der angegebene Betrag '{{amount}}' ist ungültig. Stellen Sie sicher, dass der Betrag eine gültige Zahl ist.",
+			"positive_amount": "Der Betrag '{{amount}}' muss größer als 0 sein. Negative oder Null-Werte sind nicht erlaubt.",
+			"no_summoner": "Es wurde kein Beschwörername angegeben. Bitte geben Sie einen gültigen Beschwörernamen ein, um fortzufahren.",
+			"summoner_exists": "Der Beschwörer wurde bereits zum System hinzugefügt. Doppelte Einträge sind nicht erlaubt.",
+			"lurker_running": "Ein Lurker-Prozess ist bereits für diesen Vorgang aktiv. Es ist nicht erforderlich, einen weiteren zu starten."
+		},
+		"_default": "Fehler: {{message}}"
+	},
+	"display": {
+		"side": {
+			"blue_side": "Blaue Seite",
+			"red_side": "Rote Seite",
+			"blue_side_caps": "BLAUE Seite",
+			"red_side_caps": "ROTE Seite",
+			"pot": "POT"
+		},
+		"modal": {
+			"title": "Wette auf {{side}}",
+			"label": "Wie viel möchten Sie setzen?",
+			"current": "Sie haben derzeit {{amount}}"
+		},
+		"wager": {
+			"gametype": {
+				"SOLORANKED": "SOLO / DUO Q",
+				"FLEXRANKED": "FLEX",
+				"ARAM": "ARAM",
+				"normal": "NORMALES SPIEL",
+				"unknown": "BENUTZERDEFINIERT"
+			},
+			"result": {
+				"win": "GEWONNEN",
+				"loose": "VERLOREN",
+				"you_won": "Sie haben {{amount}} gewonnen",
+				"you_bet": "Durch die Wette von {{amount}} auf {{side}} in diesem Spiel: {{gameUrl}}"
+			},
+			"winrate": "Gewinnrate",
+			"duration": "Dauer",
+			"game_ended": "Spiel beendet",
+			"game_started": "Spiel begann um",
+			"victory_from": "Sieg von",
+			"who_win": "Wer wird gewinnen?",
+			"known_participants": "Bekannte Teilnehmer",
+			"pot": "POT",
+			"creeps": "cs"
+		},
+		"command": {
+			"stop": {
+				"description": "Weisen Sie den Bot an, die Benachrichtigungen in diesem Kanal zu stoppen",
+				"reply:": "Der Bot wird nun keine Benachrichtigungen mehr in diesem Kanal senden"
+			},
+			"start": {
+				"description": "Weisen Sie den Bot an, in diesem Kanal zu starten und zu benachrichtigen",
+				"reply:": "Der Bot wird nun Benachrichtigungen in diesem Kanal senden"
+			},
+			"add": {
+				"params": {
+					"summoner_region": "Region des hinzuzufügenden Beschwörers",
+					"summoner_name": "Name des hinzuzufügenden Beschwörers im Format <AAAAA#BBB>"
+				},
+				"description": "Einen neuen Beschwörer zur Überwachung hinzufügen",
+				"reply:": "{{summonerName}} wurde zur Überwachungsliste hinzugefügt"
+			},
+			"remove": {
+				"params": {
+					"summoner_region": "Region des zu entfernenden Beschwörers",
+					"summoner_name": "Name des zu entfernenden Beschwörers im Format <AAAAA#BBB>"
+				},
+				"description": "Einen Beschwörer von der Überwachungsliste entfernen",
+				"reply:": "{{summonerName}} wurde von der Überwachungsliste entfernt"
+			},
+			"list": {
+				"description": "Erhalten Sie die Beschwörer aus der Überwachungsliste",
+				"reply:": "Beobachtete Beschwörer: {{summonerText}}"
+			},
+			"scoreboard": {
+				"description": "Das Scoreboard vom Bot abrufen"
+			}
+		}
+	}
+}

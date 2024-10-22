@@ -12,5 +12,4 @@ export const CONFIG = {
 	CURRENCY: process.env.CURRENCY ?? '🪙',
 	SAVED_DATA_PATH: process.env.SAVED_DATA_PATH ?? './data',
 	LOG_LEVEL: process.env.LOG_LEVEL?.toLowerCase() ?? 'warning',
-	AVAILABLE_LOCAL: ['fr', 'en'],
 };

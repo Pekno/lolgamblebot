@@ -19,6 +19,7 @@ import {
 	TextInputBuilder,
 	ModalBuilder,
 } from 'discord.js';
+import fs from 'fs';
 import path from 'path';
 import i18n from 'i18n';
 import { CONFIG } from '../config/config';
@@ -26,13 +27,17 @@ import { LocaleError } from '../model/LocalError';
 import { Side, sideToText } from '../enum/Side';
 import { Loggers } from '../services/LoggerManager';
 
+const localesPath = path.resolve(__dirname, '../locales');
+const files = fs.readdirSync(localesPath);
+const localList = files.map((f) => f.replace('.json', '').toLowerCase());
+
 i18n.configure({
-	locales: CONFIG.AVAILABLE_LOCAL,
-	directory: path.resolve(__dirname, '../locales'),
+	locales: localList,
+	directory: localesPath,
 	defaultLocale: 'en',
 	objectNotation: true,
 });
-if (!CONFIG.AVAILABLE_LOCAL.includes(CONFIG.LOCALE.toLowerCase()))
+if (!localList.includes(CONFIG.LOCALE.toLowerCase()))
 	throw new LocaleError('error._default', {
 		message: `LOCALE env var not recognized`,
 	});
