@@ -50,6 +50,10 @@
 			"current": "Actualmente tienes {{amount}}"
 		},
 		"wager": {
+			"gameEnd": {
+				"SURRENDER": "por Rendición",
+				"REMAKE": "por Remake"
+			},
 			"gametype": {
 				"SOLORANKED": "SOLO / DUO Q",
 				"FLEXRANKED": "FLEX",
@@ -61,7 +65,7 @@
 				"win": "GANADO",
 				"loose": "PERDIDO",
 				"you_won": "ganaste {{amount}}",
-				"you_bet": "Apostando {{amount}} en {{side}} en este Juego: {{gameUrl}}"
+				"you_bet": "Apostando {{amount}} en {{side}} en este Juego:"
 			},
 			"winrate": "Porcentaje de victorias",
 			"duration": "Duración",
@@ -76,11 +80,11 @@
 		"command": {
 			"stop": {
 				"description": "Di al bot que detenga las notificaciones en este canal",
-				"reply:": "El bot ahora dejará de enviar notificaciones en este canal"
+				"reply": "El bot ahora dejará de enviar notificaciones en este canal"
 			},
 			"start": {
 				"description": "Di al bot que comience y notifique en este canal",
-				"reply:": "El bot ahora enviará notificaciones en este canal"
+				"reply": "El bot ahora enviará notificaciones en este canal"
 			},
 			"add": {
 				"params": {
@@ -88,7 +92,7 @@
 					"summoner_name": "nombre del invocador a añadir como <AAAAA#BBB>"
 				},
 				"description": "Añadir un nuevo invocador para verificar",
-				"reply:": "{{summonerName}} ha sido añadido a la lista de verificación"
+				"reply": "{{summonerName}} ha sido añadido a la lista de verificación"
 			},
 			"remove": {
 				"params": {
@@ -96,11 +100,11 @@
 					"summoner_name": "nombre del invocador a eliminar como <AAAAA#BBB>"
 				},
 				"description": "Eliminar un invocador de la lista de verificación",
-				"reply:": "{{summonerName}} ha sido eliminado de la lista de verificación"
+				"reply": "{{summonerName}} ha sido eliminado de la lista de verificación"
 			},
 			"list": {
 				"description": "Obtener los invocadores de la lista de verificación",
-				"reply:": "Viendo estos invocadores: {{summonerText}}"
+				"reply": "Viendo estos invocadores: {{summonerText}}"
 			},
 			"scoreboard": {
 				"description": "Obtener el marcador del bot"

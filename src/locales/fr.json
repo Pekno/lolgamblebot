@@ -50,6 +50,10 @@
 			"current": "Vous avez actuellement {{amount}}"
 		},
 		"wager": {
+			"gameEnd": {
+				"SURRENDER": "par Abandon",
+				"REMAKE": "par Remake"
+			},
 			"gametype": {
 				"SOLORANKED": "SOLO / DUO Q",
 				"FLEXRANKED": "FLEX",
@@ -61,7 +65,8 @@
 				"win": "GAGNÉ",
 				"loose": "PERDU",
 				"you_won": "vous avez gagné {{amount}}",
-				"you_bet": "En pariant {{amount}} sur {{side}} dans cette Partie : {{gameUrl}}"
+				"you_bet": "En pariant {{amount}} sur {{side}} dans cette Partie :",
+				"lost": "display.wager.result.lost"
 			},
 			"winrate": "Taux de Victoire",
 			"duration": "Durée",
@@ -76,11 +81,11 @@
 		"command": {
 			"stop": {
 				"description": "Dites au bot d'arrêter les notifications dans ce canal",
-				"reply:": "Le bot ne va plus envoyer de notifications dans ce canal"
+				"reply": "Le bot ne va plus envoyer de notifications dans ce canal"
 			},
 			"start": {
 				"description": "Dites au bot de commencer et d'envoyer des notifications dans ce canal",
-				"reply:": "Le bot va maintenant envoyer des notifications dans ce canal"
+				"reply": "Le bot va maintenant envoyer des notifications dans ce canal"
 			},
 			"add": {
 				"params": {
@@ -88,7 +93,7 @@
 					"summoner_name": "nom de l'invocateur à ajouter comme <AAAAA#BBB>"
 				},
 				"description": "Ajouter un nouvel invocateur à surveiller",
-				"reply:": "Ajouté {{summonerName}} à la liste de surveillance"
+				"reply": "Ajouté {{summonerName}} à la liste de surveillance"
 			},
 			"remove": {
 				"params": {
@@ -96,11 +101,11 @@
 					"summoner_name": "nom de l'invocateur à retirer comme <AAAAA#BBB>"
 				},
 				"description": "Supprimer un invocateur de la liste de surveillance",
-				"reply:": "Retiré {{summonerName}} de la liste de surveillance"
+				"reply": "Retiré {{summonerName}} de la liste de surveillance"
 			},
 			"list": {
 				"description": "Obtenez la liste des invocateurs surveillés",
-				"reply:": "Surveillance des Invocateurs : {{summonerText}}"
+				"reply": "Surveillance des Invocateurs : {{summonerText}}"
 			},
 			"scoreboard": {
 				"description": "Obtenez le tableau des scores du bot"

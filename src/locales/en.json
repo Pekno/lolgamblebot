@@ -50,6 +50,10 @@
 			"current": "You currently have {{amount}}"
 		},
 		"wager": {
+			"gameEnd": {
+				"SURRENDER": "by Surrender",
+				"REMAKE": "by Remake"
+			},
 			"gametype": {
 				"SOLORANKED": "SOLO / DUO Q",
 				"FLEXRANKED": "FLEX",
@@ -61,7 +65,7 @@
 				"win": "WON",
 				"loose": "LOST",
 				"you_won": "you won {{amount}}",
-				"you_bet": "By wagering {{amount}} on {{side}} on this Game : {{gameUrl}}"
+				"you_bet": "By wagering {{amount}} on {{side}} on this Game :"
 			},
 			"winrate": "Winrate",
 			"duration": "Duration",
@@ -76,11 +80,11 @@
 		"command": {
 			"stop": {
 				"description": "Tell the bot to stop notification in this channel",
-				"reply:": "Bot will now stop sending notification on this channel"
+				"reply": "Bot will now stop sending notification on this channel"
 			},
 			"start": {
 				"description": "Tell the bot to start and notify in this channel",
-				"reply:": "Bot will now send notification on this channel"
+				"reply": "Bot will now send notification on this channel"
 			},
 			"add": {
 				"params": {
@@ -88,7 +92,7 @@
 					"summoner_name": "name of the summoner to be added like <AAAAA#BBB>"
 				},
 				"description": "Add a new summoner to check",
-				"reply:": "Added {{summonerName}} to the check list"
+				"reply": "Added {{summonerName}} to the check list"
 			},
 			"remove": {
 				"params": {
@@ -96,11 +100,11 @@
 					"summoner_name": "name of the summoner to be removed like <AAAAA#BBB>"
 				},
 				"description": "Remove a summoner from the check list",
-				"reply:": "Removed {{summonerName}} to the check list"
+				"reply": "Removed {{summonerName}} to the check list"
 			},
 			"list": {
 				"description": "Get the summoners from the check list",
-				"reply:": "Watching this Summoners : {{summonerText}}"
+				"reply": "Watching this Summoners : {{summonerText}}"
 			},
 			"scoreboard": {
 				"description": "Get the scoreboard from the bot"

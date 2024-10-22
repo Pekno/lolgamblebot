@@ -16,6 +16,7 @@ import { Side, sideToShortText, sideToText } from '../enum/Side';
 import { SpecificRegion } from '../enum/SpecificRegion';
 import { gameModeToType } from '../enum/GameType';
 import i18n from 'i18n';
+import { endTypeToText } from '../enum/EndType';
 
 export class Wager {
 	gameData: RiotGameData;
@@ -227,8 +228,8 @@ export class Wager {
 			.toString()
 			.replace(/[0-9]*/g, '');
 		if (this.isGameFinished && this.outcome) {
-			title += `${i18n.__('display.wager.game_ended')} - ${i18n.__('display.wager.duration')} : ${this.formatDuration(this.outcome.matchData.info.gameDuration)}`;
-			endText += `${i18n.__('display.wager.victory_from')} : **${sideToText(this.outcome.victorySide)}** side`;
+			title += `${i18n.__('display.wager.game_ended')}${endTypeToText(this.outcome.endType)} - ${i18n.__('display.wager.duration')} : ${this.formatDuration(this.outcome.matchData.info.gameDuration)}`;
+			endText += `${i18n.__('display.wager.victory_from')} : **${sideToText(this.outcome.victorySide)}**`;
 			url = `https://www.leagueofgraphs.com/match/${region.toLocaleLowerCase()}/${this.gameId}`;
 		} else {
 			title += `${i18n.__('display.wager.game_started')} ${new Date(this.gameData.gameStartTime).toLocaleString()}`;
@@ -243,7 +244,7 @@ export class Wager {
 			.setTitle(title)
 			.setThumbnail(this.participants[0].champion.image_url)
 			.setDescription(
-				`${i18n.__(`display.wager.gametype.${gameModeToType(this.gameData.gameMode)}`)}\n~ ${i18n.__('display.wager.known_participants')} :`
+				`${i18n.__(`display.wager.gametype.${gameModeToType(this.gameData.gameMode)}`)} - _${this.completeGameId}_\n~ ${i18n.__('display.wager.known_participants')} :`
 			)
 			.setAuthor({ name: 'LoLGambleBot' })
 			.addFields(fields)
@@ -260,8 +261,6 @@ export class Wager {
 			})
 			.addFields({ name: endText, value: ' ' })
 			.setURL(url);
-		//.setTimestamp()
-		//.setFooter({ text: 'Made by LoLGambleBot' });
 
 		return embed;
 	};

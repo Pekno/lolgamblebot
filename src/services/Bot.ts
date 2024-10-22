@@ -212,18 +212,17 @@ export class Bot {
 				const user = await this._client.users.fetch(payout.userId);
 				const betData = wager.bettors.get(payout.userId);
 				if (betData) {
-					const wagerInfo = i18n.__('display.wager.result.you_bet', {
+					const wagerInfo = `${i18n.__('display.wager.result.you_bet', {
 						amount: `${betData.amount} ${CONFIG.CURRENCY}`,
 						side: sideToText(betData.side),
-						gameUrl: wager.message.url,
-					});
+					})} ${wager.message.url}`;
 					if (betData.side === wager.outcome.victorySide) {
 						user.send(
 							`🥳 **${i18n.__('display.wager.result.win')}** - ${wagerInfo}, ${i18n.__('display.wager.result.you_won', { amount: `${payout.amount} ${CONFIG.CURRENCY}` })}`
 						);
 					} else {
 						user.send(
-							`😵 **${i18n.__('display.wager.result.lost')}** - ${wagerInfo}`
+							`😵 **${i18n.__('display.wager.result.loose')}** - ${wagerInfo}`
 						);
 					}
 				}

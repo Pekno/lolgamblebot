@@ -60,7 +60,7 @@ export class RiotAPI extends MainApi {
 				matchData: response.data,
 			});
 		} catch (error: any) {
-			// If status code is 404 in API, then summoner is not in game
+			// If status code is 404 in API, then match file not found
 			if (error?.response?.data) {
 				const data = error?.response?.data;
 				if (data?.status?.status_code === 404) return null;

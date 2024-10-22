@@ -50,6 +50,10 @@
 			"current": "Sie haben derzeit {{amount}}"
 		},
 		"wager": {
+			"gameEnd": {
+				"SURRENDER": "durch Aufgabe",
+				"REMAKE": "durch Remake"
+			},
 			"gametype": {
 				"SOLORANKED": "SOLO / DUO Q",
 				"FLEXRANKED": "FLEX",
@@ -61,7 +65,7 @@
 				"win": "GEWONNEN",
 				"loose": "VERLOREN",
 				"you_won": "Sie haben {{amount}} gewonnen",
-				"you_bet": "Durch die Wette von {{amount}} auf {{side}} in diesem Spiel: {{gameUrl}}"
+				"you_bet": "Durch die Wette von {{amount}} auf {{side}} in diesem Spiel:"
 			},
 			"winrate": "Gewinnrate",
 			"duration": "Dauer",
@@ -76,11 +80,11 @@
 		"command": {
 			"stop": {
 				"description": "Weisen Sie den Bot an, die Benachrichtigungen in diesem Kanal zu stoppen",
-				"reply:": "Der Bot wird nun keine Benachrichtigungen mehr in diesem Kanal senden"
+				"reply": "Der Bot wird nun keine Benachrichtigungen mehr in diesem Kanal senden"
 			},
 			"start": {
 				"description": "Weisen Sie den Bot an, in diesem Kanal zu starten und zu benachrichtigen",
-				"reply:": "Der Bot wird nun Benachrichtigungen in diesem Kanal senden"
+				"reply": "Der Bot wird nun Benachrichtigungen in diesem Kanal senden"
 			},
 			"add": {
 				"params": {
@@ -88,7 +92,7 @@
 					"summoner_name": "Name des hinzuzufügenden Beschwörers im Format <AAAAA#BBB>"
 				},
 				"description": "Einen neuen Beschwörer zur Überwachung hinzufügen",
-				"reply:": "{{summonerName}} wurde zur Überwachungsliste hinzugefügt"
+				"reply": "{{summonerName}} wurde zur Überwachungsliste hinzugefügt"
 			},
 			"remove": {
 				"params": {
@@ -96,11 +100,11 @@
 					"summoner_name": "Name des zu entfernenden Beschwörers im Format <AAAAA#BBB>"
 				},
 				"description": "Einen Beschwörer von der Überwachungsliste entfernen",
-				"reply:": "{{summonerName}} wurde von der Überwachungsliste entfernt"
+				"reply": "{{summonerName}} wurde von der Überwachungsliste entfernt"
 			},
 			"list": {
 				"description": "Erhalten Sie die Beschwörer aus der Überwachungsliste",
-				"reply:": "Beobachtete Beschwörer: {{summonerText}}"
+				"reply": "Beobachtete Beschwörer: {{summonerText}}"
 			},
 			"scoreboard": {
 				"description": "Das Scoreboard vom Bot abrufen"
