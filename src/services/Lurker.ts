@@ -15,8 +15,9 @@ import { Summoner } from '../model/Summoner';
 import { Side, sideToShortText } from '../enum/Side';
 import { SpecificRegion } from '../enum/SpecificRegion';
 import { LurkerStatus } from '../enum/LurkerStatus';
-import { Logger } from './LoggerService';
 import { gameModeToType } from '../enum/GameType';
+import { Loggers } from './LoggerManager';
+import { LocaleError } from '../model/LocalError';
 
 export class Lurker {
 	private _wagerList: Map<number, Wager> = new Map<number, Wager>();
@@ -51,8 +52,8 @@ export class Lurker {
 
 	private dispatch = async (event: string, wager: Wager) => {
 		const listener = this._events.get(event);
-		if (!listener) throw new Error('Listener not registered');
-		Logger.info(
+		if (!listener) throw new LocaleError('error.lurker.no_listener');
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : GameId ${wager.gameData.platformId}_${wager.gameId} EVENT - "${event}" triggered`
 		);
 		await listener(wager);
@@ -70,14 +71,14 @@ export class Lurker {
 		side: Side
 	): Promise<string> => {
 		const wager = this._wagerList.get(gameId);
-		if (!wager) throw new Error('No wager was found on this GameId');
+		if (!wager) throw new LocaleError('error.lurker.no_wage_on_gameId');
 		const currentScore = this.scoreBoard.get(userId);
-		if (!currentScore) throw new Error("This user can't wager");
+		if (!currentScore) throw new LocaleError('error.lurker.cannot_wager');
 		if (currentScore < amount)
-			throw new Error("You can't wager more than you own");
+			throw new LocaleError('error.lurker.cannot_wager_amount');
 		const betText = wager.bet(userId, amount, side);
 		this.scoreBoard.set(userId, currentScore - amount);
-		Logger.info(
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : GameId ${wager.gameData.platformId}_${wager.gameId} IN PROGRESS - Discord user ${userId} has bet ${amount} for ${sideToShortText(side)}`
 		);
 		await this.dispatch('updateWager', wager);
@@ -89,7 +90,7 @@ export class Lurker {
 		summonerRegion: SpecificRegion,
 		byPassSave: boolean = false
 	) => {
-		if (!summonerName) throw new Error('No summoner name given');
+		if (!summonerName) throw new LocaleError('error.lurker.no_summoner');
 		const summ = this._riotApi.cleanupSummonerName(
 			summonerName,
 			summonerRegion
@@ -100,21 +101,21 @@ export class Lurker {
 				s.tagLine === summ.tagLine &&
 				s.region === summ.region
 		);
-		if (exactSumm !== -1) throw new Error('Summoner already added');
+		if (exactSumm !== -1) throw new LocaleError('error.lurker.summoner_exists');
 		const summFromOnline = await this._riotApi.getSummonerInfo(
 			summ,
 			summonerRegion
 		);
 		if (!summFromOnline) {
 			this.removeSummoner(summonerName, summonerRegion);
-			Logger.info(
+			Loggers.get(this.guildId).info(
 				`Lurker ${this.guildId} : Can't retrive summoner from Riot API, deleted if already existed`
 			);
 			return;
 		}
 		const compSumm = await this._opggApi.getSummonerInfo(summFromOnline);
-		if (!compSumm) throw new Error('Can`t retrive summoner from OPGG API');
-		Logger.info(
+		if (!compSumm) throw new LocaleError('error.opgg.no_summoner');
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Adding ${compSumm.wholeGameName} to checkList`
 		);
 		this._summoners.push(compSumm);
@@ -204,7 +205,7 @@ export class Lurker {
 		summonerName: string | null,
 		summonerRegion: SpecificRegion
 	) => {
-		if (!summonerName) throw new Error('No summoner name given');
+		if (!summonerName) throw new LocaleError('error.lurker.no_summoner');
 		const summ = this._riotApi.cleanupSummonerName(
 			summonerName,
 			summonerRegion
@@ -216,13 +217,13 @@ export class Lurker {
 				s.region === summ.region
 		);
 		if (exactSumm === -1) {
-			Logger.info(
+			Loggers.get(this.guildId).info(
 				`Lurker ${this.guildId} : Summoner ${summ.wholeGameName} is not present in the check list`
 			);
 			return;
 		}
 		this._summoners.splice(exactSumm, 1);
-		Logger.info(
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Removing ${summ.wholeGameName} to checkList`
 		);
 		this.save();
@@ -231,7 +232,7 @@ export class Lurker {
 	checkWagersGame = async () => {
 		if (!this.channelId) return;
 		if (this.status !== LurkerStatus.RUNNING) return;
-		Logger.info(
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Checking if one of ${this._wagerList.size} wagers ended`
 		);
 		for (const [, wager] of this._wagerList) {
@@ -244,7 +245,7 @@ export class Lurker {
 			wager.outcome = outcome;
 			this.distributeReward(wager);
 			await this.dispatch('endedWager', wager);
-			Logger.info(
+			Loggers.get(this.guildId).info(
 				`Lurker ${this.guildId} : GameId ${wager.completeGameId} ENDED at ${new Date(wager.gameData.gameStartTime + outcome.matchData.info.gameDuration).toLocaleString()}`
 			);
 		}
@@ -254,14 +255,14 @@ export class Lurker {
 		if (!this.channelId) return;
 		if (this.status !== LurkerStatus.RUNNING) return;
 		const notInGameSummoner = this._summoners.filter((s) => !s.currentWager);
-		Logger.info(
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Checking if one of ${notInGameSummoner.length} summoners that are not already in games are playing`
 		);
 		for (const summoner of notInGameSummoner) {
 			try {
 				const currentGame = await this._riotApi.getCurrentGame(summoner);
 				if (currentGame) {
-					Logger.info(
+					Loggers.get(this.guildId).info(
 						`Lurker ${this.guildId} : Game Found => ${currentGame.gameId}`
 					);
 
@@ -274,7 +275,7 @@ export class Lurker {
 						participants: [],
 					});
 
-					Logger.info(
+					Loggers.get(this.guildId).info(
 						`Lurker ${this.guildId} : GameId ${newWager.completeGameId} STARTED at ${new Date(currentGame.gameStartTime).toLocaleString()}`
 					);
 					await this.setParticipantsInfo(currentGame.participants, newWager);
@@ -285,10 +286,10 @@ export class Lurker {
 						await this.dispatch('lockedWager', newWager);
 					});
 
-					Logger.info(`Lurker ${this.guildId} :`);
+					Loggers.get(this.guildId).info(`Lurker ${this.guildId} :`);
 				}
 			} catch (e: any) {
-				Logger.error(e, e.stack);
+				Loggers.get(this.guildId).error(e, e.stack);
 			}
 		}
 	};
@@ -323,7 +324,7 @@ export class Lurker {
 			});
 
 			wager.participants.push(newParticipant);
-			Logger.info(
+			Loggers.get(this.guildId).info(
 				`Lurker ${this.guildId} : GameId ${wager.completeGameId} IN PROGRESS - Summoner "${participatingSummoner.wholeGameName}" is playing : ${summChampion.id} - ${summChampion.name}`
 			);
 		}
@@ -343,7 +344,7 @@ export class Lurker {
 				platformId: wagerSave.gameData.platformId,
 			}),
 		});
-		Logger.info(
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : GameId ${newWager.completeGameId} RESTORING from save file`
 		);
 		const riotParticipants = [];
@@ -376,10 +377,12 @@ export class Lurker {
 	start = async (channelId: string | null, fromSave?: Save) => {
 		this.channelId = channelId;
 		if (this.status === LurkerStatus.RUNNING)
-			throw new Error('Lurker already running');
+			throw new LocaleError('error.lurker.lurker_running');
 
 		if (fromSave) {
-			Logger.info(`Lurker ${this.guildId} : Restoring lurker data from save`);
+			Loggers.get(this.guildId).info(
+				`Lurker ${this.guildId} : Restoring lurker data from save`
+			);
 			await this.addSummoners(fromSave.summoners, true);
 			if (fromSave?.scoreboard)
 				for (const score of fromSave.scoreboard) {
@@ -391,11 +394,15 @@ export class Lurker {
 				}
 		}
 
-		Logger.info(`Lurker ${this.guildId} :`);
-		Logger.info(this._summoners.map((s) => s.wholeGameName).join(', '));
+		Loggers.get(this.guildId).info(`Lurker ${this.guildId} :`);
+		Loggers.get(this.guildId).info(
+			this._summoners.map((s) => s.wholeGameName).join(', ')
+		);
 		await this.checkSummonersGame();
 		setInterval(async () => {
-			Logger.info(`Lurker ${this.guildId} : Scheduled Check`);
+			Loggers.get(this.guildId).info(
+				`Lurker ${this.guildId} : Scheduled Check`
+			);
 			await this.checkSummonersGame();
 			await this.checkWagersGame();
 		}, 1000 * CONFIG.CHECK_INTERVAL);
@@ -459,7 +466,7 @@ export class Lurker {
 			`${CONFIG.SAVED_DATA_PATH}/${this.guildId}.json`,
 			JSON.stringify(save)
 		);
-		Logger.info(
+		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Saved data on ${CONFIG.SAVED_DATA_PATH}/${this.guildId}.json`
 		);
 		return save;

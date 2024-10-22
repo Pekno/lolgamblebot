@@ -6,8 +6,7 @@ export class OutCome {
 
 	get victorySide(): Side {
 		const team = this.matchData.info.teams.find((t) => t.win);
-		if (!team) throw new Error('No team found in matchdata');
-		return team.teamId as Side;
+		return team?.teamId as Side;
 	}
 
 	public constructor(init?: Partial<OutCome>) {

@@ -1,5 +1,4 @@
 import i18n, { Replacements } from 'i18n';
-
 export class LocaleError extends Error {
 	constructor(i18nKey: string, i18nArgs?: Replacements) {
 		let message: string;

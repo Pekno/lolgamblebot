@@ -21,10 +21,10 @@ import {
 } from 'discord.js';
 import path from 'path';
 import i18n from 'i18n';
-import { Logger } from '../services/LoggerService';
 import { CONFIG } from '../config/config';
 import { LocaleError } from '../model/LocalError';
 import { Side, sideToText } from '../enum/Side';
+import { Loggers } from '../services/LoggerManager';
 
 i18n.configure({
 	locales: CONFIG.AVAILABLE_LOCAL,
@@ -37,7 +37,7 @@ if (!CONFIG.AVAILABLE_LOCAL.includes(CONFIG.LOCALE.toLowerCase()))
 		message: `LOCALE env var not recognized`,
 	});
 i18n.setLocale(CONFIG.LOCALE.toLowerCase());
-Logger.info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
+Loggers.get().info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
 
 const regionOption = Object.keys(SpecificRegion).map((v, i) => {
 	return {
@@ -50,48 +50,48 @@ const commandsList = new CommandList();
 commandsList.push(
 	new Command({
 		name: 'start',
-		description: 'Tell the bot to start and notify in this channel',
+		description: i18n.__('display.command.start.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
 			lurker: Lurker
 		) => {
+			await interaction.deferReply();
 			await lurker.start(interaction.channelId);
-			await interaction.reply(`Bot will now send notification on this channel`);
+			await interaction.editReply(i18n.__('display.command.start.reply'));
 		},
 	})
 );
 commandsList.push(
 	new Command({
 		name: 'stop',
-		description: 'Tell the bot to stop notification in this channel',
+		description: i18n.__('display.command.stop.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
 			lurker: Lurker
 		) => {
+			await interaction.deferReply();
 			await lurker.stop();
-			await interaction.reply(
-				`Bot will now stop sending notification on this channel`
-			);
+			await interaction.editReply(i18n.__('display.command.stop.reply'));
 		},
 	})
 );
 commandsList.push(
 	new Command({
 		name: 'add',
-		description: 'Add a new summoner to check',
+		description: i18n.__('display.command.add.description'),
 		options: [
 			new CommandOption({
 				name: 'summoner_region',
-				description: 'region of the summoner to be added',
+				description: i18n.__('display.command.add.params.summoner_region'),
 				type: ApplicationCommandOptionType.String,
 				choices: regionOption,
 				required: true,
 			}),
 			new CommandOption({
 				name: 'summoner_name',
-				description: 'name of the summoner to be added like <AAAAA#BBB>',
+				description: i18n.__('display.command.add.params.summoner_name'),
 				type: ApplicationCommandOptionType.String,
 				required: true,
 			}),
@@ -101,30 +101,35 @@ commandsList.push(
 			client: Client,
 			lurker: Lurker
 		) => {
+			await interaction.deferReply();
 			const summonerName = interaction.options.getString('summoner_name');
 			const summonerRegion = interaction.options.getString(
 				'summoner_region'
 			) as SpecificRegion;
 			await lurker.addSummoner(summonerName, summonerRegion);
-			await interaction.reply(`Added ${summonerName} to the check list`);
+			await interaction.editReply(
+				i18n.__('display.command.add.reply', {
+					summonerName: summonerName ?? '??',
+				})
+			);
 		},
 	})
 );
 commandsList.push(
 	new Command({
 		name: 'remove',
-		description: 'Remove a summoner from the check list',
+		description: i18n.__('display.command.remove.description'),
 		options: [
 			new CommandOption({
 				name: 'summoner_region',
-				description: 'region of the summoner to be removed',
+				description: i18n.__('display.command.remove.params.summoner_name'),
 				type: ApplicationCommandOptionType.String,
 				choices: regionOption,
 				required: true,
 			}),
 			new CommandOption({
 				name: 'summoner_name',
-				description: 'name of the summoner to be removed like <AAAAA#BBB>',
+				description: i18n.__('display.command.remove.params.summoner_name'),
 				type: ApplicationCommandOptionType.String,
 				required: true,
 			}),
@@ -134,39 +139,50 @@ commandsList.push(
 			client: Client,
 			lurker: Lurker
 		) => {
+			await interaction.deferReply();
 			const summonerName = interaction.options.getString('summoner_name');
 			const summonerRegion = interaction.options.getString(
 				'summoner_region'
 			) as SpecificRegion;
 			lurker.removeSummoner(summonerName, summonerRegion);
-			await interaction.reply(`Removed ${summonerName} from the check list`);
+			await interaction.editReply(
+				i18n.__('display.command.remove.reply', {
+					summonerName: summonerName ?? '??',
+				})
+			);
 		},
 	})
 );
 commandsList.push(
 	new Command({
 		name: 'list',
-		description: 'Get the summoners from the check list',
+		description: i18n.__('display.command.list.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
 			lurker: Lurker
 		) => {
+			await interaction.deferReply();
 			const summonerText = lurker.getSummoners();
-			await interaction.reply(`Watching this Summoners : ${summonerText}`);
+			await interaction.editReply(
+				i18n.__('display.command.remove.description', {
+					summonerText: summonerText,
+				})
+			);
 		},
 	})
 );
 commandsList.push(
 	new Command({
 		name: 'scoreboard',
-		description: 'Get the scoreboard from the bot',
+		description: i18n.__('display.command.scoreboard.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
 			lurker: Lurker
 		) => {
-			await interaction.reply({
+			await interaction.deferReply();
+			await interaction.editReply({
 				embeds: [await lurker.buildEmbedScoreboard(client)],
 			});
 		},
@@ -186,19 +202,27 @@ commandsList.push(
 			}
 		) => {
 			if (!byPassParameters?.userId)
-				throw new Error('Cannot find userId on this server');
+				throw new LocaleError('error.discord.wrong_userId');
 			const currentScore = lurker.checkScore(byPassParameters.userId);
 
 			const modal = new ModalBuilder()
 				.setCustomId(
 					`bet_modal;${byPassParameters.side};${byPassParameters.gameId};${currentScore}`
 				)
-				.setTitle(`Wager on ${sideToText(byPassParameters.side)}`);
+				.setTitle(
+					i18n.__('display.modal.current', {
+						side: sideToText(byPassParameters.side),
+					})
+				);
 
 			const favoriteColorInput = new TextInputBuilder()
 				.setCustomId('amount')
-				.setLabel("What's the amount you want to wager ?")
-				.setPlaceholder(`You currently have ${currentScore} ${CONFIG.CURRENCY}`)
+				.setLabel(i18n.__('display.modal.label'))
+				.setPlaceholder(
+					i18n.__('display.modal.current', {
+						amount: `${currentScore} ${CONFIG.CURRENCY}`,
+					})
+				)
 				.setRequired(true)
 				.setStyle(TextInputStyle.Short);
 
@@ -226,24 +250,29 @@ commandsList.push(
 				amount: number;
 			}
 		) => {
+			await interaction.deferReply({ ephemeral: true });
 			if (Number.isNaN(byPassParameters?.amount))
-				throw new Error(`${byPassParameters.amount} is not a correct number`);
+				throw new LocaleError('error.lurker.wrong_amount', {
+					amount: `${byPassParameters.amount}`,
+				});
 			if (byPassParameters?.amount <= 0)
-				throw new Error(`${byPassParameters.amount} is not > 0`);
+				throw new LocaleError('error.lurker.positive_amount', {
+					amount: `${byPassParameters.amount}`,
+				});
 			if (!byPassParameters?.userId)
-				throw new Error('Cannot find userId on this server');
+				throw new LocaleError('error.discord.wrong_userId');
 			const wagerText = await lurker.setBet(
 				byPassParameters.gameId,
 				byPassParameters.userId,
 				byPassParameters.amount,
 				byPassParameters.side
 			);
-			interaction.reply({ content: wagerText, ephemeral: true });
+			interaction.editReply({ content: wagerText });
 		},
 	})
 );
 
 const bot = new Bot();
 bot.start(commandsList).catch((e: any) => {
-	Logger.error(e, e.stack);
+	Loggers.get().error(e, e.stack);
 });

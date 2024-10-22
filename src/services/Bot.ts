@@ -16,8 +16,9 @@ import path from 'path';
 import { Save } from '../model/Save';
 import { RiotChampion } from '../model/RiotModels';
 import { Side, sideToText } from '../enum/Side';
-import { Logger } from './LoggerService';
 import { LocaleError } from '../model/LocalError';
+import { Loggers } from './LoggerManager';
+import i18n from 'i18n';
 
 export class Bot {
 	private _lurkers: Map<string, Lurker> = new Map<string, Lurker>();
@@ -29,17 +30,19 @@ export class Bot {
 	private register = async (commandList: CommandList) => {
 		this._client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-		if (!CONFIG.DISCORD_TOKEN) throw new Error('No Discord token configured');
-		if (!CONFIG.DISCORD_ID) throw new Error('No Discord id configured');
+		if (!CONFIG.DISCORD_TOKEN)
+			throw new LocaleError('error.discord.no_discord_token');
+		if (!CONFIG.DISCORD_ID)
+			throw new LocaleError('error.discord.no_discord_id');
 
 		const rest = new REST({ version: '10' }).setToken(CONFIG.DISCORD_TOKEN);
 		try {
 			await rest.put(Routes.applicationCommands(CONFIG.DISCORD_ID), {
 				body: commandList.build(),
 			});
-			Logger.info('Bot : Successfully loaded application (/) commands.');
+			Loggers.get().info('Bot : Successfully loaded application (/) commands.');
 		} catch (e: any) {
-			Logger.error(e, e.stack);
+			Loggers.get().error(e, e.stack);
 		}
 
 		this._client.on(Events.InteractionCreate, async (interaction) => {
@@ -80,8 +83,6 @@ export class Bot {
 					return;
 				}
 				// Check lurker
-				if (!interaction.guildId)
-					throw new Error('Command was not sent from a server');
 				let specificLurker = this._lurkers.get(interaction.guildId);
 				if (!specificLurker) {
 					this._lurkers.set(
@@ -91,8 +92,7 @@ export class Bot {
 					specificLurker = this._lurkers.get(interaction.guildId);
 				}
 				if (!specificLurker)
-					throw new Error('Could not find a Lurker available for this server');
-
+					throw new LocaleError('error.lurker.no_server_lurker');
 				await commandList.execute(
 					interaction,
 					this._client,
@@ -101,7 +101,7 @@ export class Bot {
 					payload
 				);
 			} catch (e: any) {
-				Logger.error(e, e.stack);
+				Loggers.get().error(e, e.stack);
 				if (e.code !== 10062) {
 					if ('deferred' in interaction && interaction.deferred) {
 						await interaction.editReply({
@@ -121,21 +121,23 @@ export class Bot {
 	};
 
 	start = async (commandList: CommandList) => {
-		// Start bot, then start lurkers
-		if (!commandList) throw new Error('No Discord commands configured');
+		if (!commandList)
+			throw new LocaleError('error.discord.no_configured_command');
 		await this.register(commandList);
 
-		this._championList = await this._opggApi.getChampionList();
+		this._championList = await this._opggApi.getChampionList(CONFIG.LOCALE);
 		if (!this._championList?.length)
-			throw new Error('No champion list available');
-		Logger.info(`Bot : Retrieved all ${this._championList.length} champions`);
+			throw new LocaleError('error.opgg.no_champions_list');
+		Loggers.get().info(
+			`Bot : Retrieved all ${this._championList.length} champions`
+		);
 
 		// Recreate Lurkers from save datafile
 		const files = fs.readdirSync(CONFIG.SAVED_DATA_PATH);
 		const filteredFiles = files.filter(
 			(file) => path.extname(file).toLowerCase() === '.json'
 		);
-		Logger.info(
+		Loggers.get().info(
 			`Bot : Restoring ${filteredFiles.length} lurkers from save file`
 		);
 		for (const file of filteredFiles) {
@@ -163,7 +165,7 @@ export class Bot {
 	};
 
 	private createAndBindLurker = (guildId: string): Lurker => {
-		Logger.info(`Bot : Creating new lurker for guildId : ${guildId}`);
+		Loggers.get().info(`Bot : Creating new lurker for guildId : ${guildId}`);
 		const lurker = new Lurker(
 			guildId,
 			this._riotApi,
@@ -210,13 +212,19 @@ export class Bot {
 				const user = await this._client.users.fetch(payout.userId);
 				const betData = wager.bettors.get(payout.userId);
 				if (betData) {
-					const wagerInfo = `By wagering ${betData.amount} ${CONFIG.CURRENCY} on ${sideToText(betData.side)} side on this Game : ${wager.message.url}`;
+					const wagerInfo = i18n.__('display.wager.result.you_bet', {
+						amount: `${betData.amount} ${CONFIG.CURRENCY}`,
+						side: sideToText(betData.side),
+						gameUrl: wager.message.url,
+					});
 					if (betData.side === wager.outcome.victorySide) {
 						user.send(
-							`🥳 **WON** - ${wagerInfo}, you won ${payout.amount} ${CONFIG.CURRENCY}`
+							`🥳 **${i18n.__('display.wager.result.win')}** - ${wagerInfo}, ${i18n.__('display.wager.result.you_won', { amount: `${payout.amount} ${CONFIG.CURRENCY}` })}`
 						);
 					} else {
-						user.send(`😵 **LOST** - ${wagerInfo}`);
+						user.send(
+							`😵 **${i18n.__('display.wager.result.lost')}** - ${wagerInfo}`
+						);
 					}
 				}
 			}
@@ -239,7 +247,7 @@ export class Bot {
 	};
 
 	constructor() {
-		if (!CONFIG.RIOT_API_KEY) throw new Error('No RIOT API KEY defined');
+		if (!CONFIG.RIOT_API_KEY) throw new LocaleError('error.riot.no_api_key');
 		this._riotApi = new RiotAPI(
 			{ 'X-Riot-Token': CONFIG.RIOT_API_KEY },
 			CONFIG.RIOT_API_LIMIT_BY_MINUTES

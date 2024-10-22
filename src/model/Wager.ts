@@ -15,6 +15,7 @@ import { Bet } from './Bet';
 import { Side, sideToShortText, sideToText } from '../enum/Side';
 import { SpecificRegion } from '../enum/SpecificRegion';
 import { gameModeToType } from '../enum/GameType';
+import i18n from 'i18n';
 
 export class Wager {
 	gameData: RiotGameData;
@@ -66,17 +67,19 @@ export class Wager {
 	}
 
 	start = (event: () => void) => {
-		const timePassed = CONFIG.TIME_BEFORE_BET_LOCK - this.gameData.gameLength;
+		const timePassed =
+			CONFIG.TIME_BEFORE_BET_LOCK - Math.abs(this.gameData.gameLength);
 
 		// If game is already started
 		if (timePassed <= 0) {
 			this.isWagerLocked = true;
+			event();
 			return;
 		}
 
 		// if game is new
 		const resetInterval = timePassed * 1000;
-		this._lockDelay = setInterval(() => {
+		this._lockDelay = setTimeout(() => {
 			this.isWagerLocked = true;
 			event();
 			clearInterval(this._lockDelay);
@@ -84,8 +87,7 @@ export class Wager {
 	};
 
 	bet = (userId: string, amount: number, side: Side): string => {
-		if (this.bettors.get(userId))
-			throw new Error('This user already betted on this game');
+		if (this.bettors.get(userId)) return `You have already bet on this game`;
 		this.bettors.set(
 			userId,
 			new Bet({
@@ -128,18 +130,14 @@ export class Wager {
 		const blueBetFraction = total[Side.BLUE] / totalBets;
 		const redBetFraction = total[Side.RED] / totalBets;
 
-		const adjustedBlueOdds = blueOdds * (1 + redBetFraction);
-		const adjustedRedOdds = redOdds * (1 + blueBetFraction);
+		const adjustedBlueOdds = Math.min(blueOdds * (1 + redBetFraction), 3);
+		const adjustedRedOdds = Math.min(redOdds * (1 + blueBetFraction), 3);
 
 		return [adjustedRedOdds, adjustedBlueOdds];
 	};
 
 	private getPayouts = (odds: [number, number]): Payout[] => {
 		const winningSide = this.outcome.victorySide;
-		if (!winningSide)
-			throw new Error(
-				"Can't distribute reward because of a missing winning side"
-			);
 		const payouts: Payout[] = [];
 		for (const [userId, bet] of this.bettors) {
 			if (bet.side === winningSide) {
@@ -173,13 +171,17 @@ export class Wager {
 
 		const blueSide = new ButtonBuilder()
 			.setCustomId(`button_bet;${Side.BLUE};${this.gameId}`)
-			.setLabel(`Blue Side | ${total[Side.BLUE]} ${CONFIG.CURRENCY}`)
+			.setLabel(
+				`${i18n.__('display.side.blue_side')} | ${total[Side.BLUE]} ${CONFIG.CURRENCY}`
+			)
 			.setStyle(ButtonStyle.Primary)
 			.setDisabled(this.isWagerLocked);
 
 		const redSide = new ButtonBuilder()
 			.setCustomId(`button_bet;${Side.RED};${this.gameId}`)
-			.setLabel(`Red Side | ${total[Side.RED]} ${CONFIG.CURRENCY}`)
+			.setLabel(
+				`${i18n.__('display.side.red_side')} | ${total[Side.RED]} ${CONFIG.CURRENCY}`
+			)
 			.setStyle(ButtonStyle.Danger)
 			.setDisabled(this.isWagerLocked);
 
@@ -199,7 +201,7 @@ export class Wager {
 					(part) => part.puuid === p.summoner.puuid
 				);
 				if (stats) {
-					minionStats = `${stats.totalMinionsKilled} cs`;
+					minionStats = `${stats.totalMinionsKilled} ${i18n.__('display.wager.creeps')}`;
 					kdaStats = `${stats.kills}/${stats.deaths}/${stats.assists}`;
 				}
 			}
@@ -210,7 +212,7 @@ export class Wager {
 				inline: true,
 			});
 			fields.push({
-				name: 'Winrate',
+				name: i18n.__('display.wager.winrate'),
 				value: `${(p.opggWinrate * 100).toFixed(2)}%`,
 				inline: true,
 			});
@@ -225,12 +227,12 @@ export class Wager {
 			.toString()
 			.replace(/[0-9]*/g, '');
 		if (this.isGameFinished && this.outcome) {
-			title += `Game Ended - Duration : ${this.formatDuration(this.outcome.matchData.info.gameDuration)}`;
-			endText += `Victory from : **${sideToText(this.outcome.victorySide)}** side`;
+			title += `${i18n.__('display.wager.game_ended')} - ${i18n.__('display.wager.duration')} : ${this.formatDuration(this.outcome.matchData.info.gameDuration)}`;
+			endText += `${i18n.__('display.wager.victory_from')} : **${sideToText(this.outcome.victorySide)}** side`;
 			url = `https://www.leagueofgraphs.com/match/${region.toLocaleLowerCase()}/${this.gameId}`;
 		} else {
-			title += `Game Started at ${new Date(this.gameData.gameStartTime).toLocaleString()}`;
-			endText += `Who's gonna win ?`;
+			title += `${i18n.__('display.wager.game_started')} ${new Date(this.gameData.gameStartTime).toLocaleString()}`;
+			endText += `${i18n.__('display.wager.who_win')}`;
 			url = `https://porofessor.gg/live/${region.toLocaleLowerCase()}/${this.participants[0].summoner.gameName.replace(/ /g, '+')}-${this.participants[0].summoner.tagLine.replace(/ /g, '+')}`;
 		}
 
@@ -241,18 +243,18 @@ export class Wager {
 			.setTitle(title)
 			.setThumbnail(this.participants[0].champion.image_url)
 			.setDescription(
-				`${gameModeToType(this.gameData.gameMode)}\n~ Known participants :`
+				`${i18n.__(`display.wager.gametype.${gameModeToType(this.gameData.gameMode)}`)}\n~ ${i18n.__('display.wager.known_participants')} :`
 			)
 			.setAuthor({ name: 'LoLGambleBot' })
 			.addFields(fields)
 			.addFields({ name: '\u200B', value: '\u200B' })
 			.addFields({
-				name: `RED vs BLUE`,
+				name: `${sideToText(Side.RED)} vs ${sideToText(Side.BLUE)}`,
 				value: `-> ${odds[1].toFixed(2)} : ${odds[0].toFixed(2)} <-`,
 				inline: true,
 			})
 			.addFields({
-				name: `POT :`,
+				name: `${i18n.__('display.side.pot')} :`,
 				value: `${this.pot} ${CONFIG.CURRENCY}`,
 				inline: true,
 			})

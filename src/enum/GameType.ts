@@ -3,6 +3,7 @@ export enum GameType {
 	FLEXRANKED = 'FLEXRANKED',
 	ARAM = 'ARAM',
 	NORMAL = 'normal',
+	UNKNOWN = 'unknown',
 }
 
 export const gameModeToType = (gameMode: string): GameType => {
@@ -11,6 +12,7 @@ export const gameModeToType = (gameMode: string): GameType => {
 			return GameType.SOLORANKED;
 		case 'ARAM':
 			return GameType.ARAM;
+		default:
+			return GameType.UNKNOWN;
 	}
-	throw new Error(`Cannot find this GameMode : ${gameMode}`);
 };

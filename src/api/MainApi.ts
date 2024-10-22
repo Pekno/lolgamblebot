@@ -3,8 +3,8 @@ import axios, {
 	AxiosResponse,
 	RawAxiosRequestHeaders,
 } from 'axios';
-import { Logger } from '../services/LoggerService';
 import { ApiRequest } from '../model/ApiRequest';
+import { Loggers } from '../services/LoggerManager';
 
 export class MainApi {
 	private queue: ApiRequest[] = [];
@@ -43,7 +43,7 @@ export class MainApi {
 	public call(url: string, options?: any): Promise<AxiosResponse<any, any>> {
 		const encodedUrl = encodeURI(url);
 		return new Promise((resolve, reject) => {
-			Logger.info(`${this.apiName} : ADDED to queue "${encodedUrl}"`);
+			Loggers.get().info(`${this.apiName} : ADDED to queue "${encodedUrl}"`);
 			this.queue.push({ url: encodedUrl, options, resolve, reject });
 		});
 	}
@@ -60,7 +60,7 @@ export class MainApi {
 		this.currentRequestCount++;
 
 		try {
-			Logger.info(
+			Loggers.get().info(
 				`${this.apiName} : PROCESS from queue "${url}" -> ${this.currentRequestCount}/${this.maxRequestsPerMinute}`
 			);
 			const response = await this.axiosInstance.get(url, options);

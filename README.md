@@ -58,7 +58,8 @@ A Docker image is also available via [Docker Hub](https://hub.docker.com/r/pekno
 
 ## Ideas / To do
 
-- [ ] Add locale support
-- [ ] Make one log file per Lurker/Guild
-- [ ] Add one combined error log
-- [ ] Make all response defered
+- [x] Add locale support
+- [x] Make one log file per Lurker/Guild
+- [x] Add one combined error log
+- [x] Make all response defered
+- [ ] Improve / Rework Winning odds computation
