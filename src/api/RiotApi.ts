@@ -84,8 +84,6 @@ export class RiotAPI extends MainApi {
 			if (error?.response?.data) {
 				const data = error?.response?.data;
 				if (data?.status?.status_code === 404) return null;
-				if (data?.status && JSON.parse(data)?.status?.status_code === 404)
-					return null;
 			}
 			throw error;
 		}
