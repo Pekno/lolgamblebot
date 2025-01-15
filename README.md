@@ -1,4 +1,4 @@
-# League of Legends Gamble Bot
+# ![Logo](logo.png) League of Legends Gamble Bot
 
 ## Description
 
