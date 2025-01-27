@@ -46,10 +46,10 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build -t ${{ vars.DOCKERHUB_IMAGE }}:latest .
-          docker tag ${{ vars.DOCKERHUB_IMAGE }}:latest ${{ vars.DOCKERHUB_IMAGE }}:${{ steps.get_version.outputs.version }}
+          docker tag ${{ vars.DOCKERHUB_IMAGE }}:latest ${{ vars.DOCKERHUB_IMAGE }}:${{ steps.get_version.outputs.version-without-v }}
           
       # Push the Docker image
       - name: Push Docker Image
         run: |
           docker push ${{ vars.DOCKERHUB_IMAGE }}:latest
-          docker push ${{ vars.DOCKERHUB_IMAGE }}:${{ steps.get_version.outputs.version }}
+          docker push ${{ vars.DOCKERHUB_IMAGE }}:${{ steps.get_version.outputs.version-without-v }}
