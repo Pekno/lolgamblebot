@@ -23,6 +23,9 @@ jobs:
       - name: Check if version was bumped
         id: version_check
         run: |
+          # Fetch full commit history to ensure HEAD~1 is available
+          git fetch --depth=2
+          
           # Get the previous and current version from package.json
           PREVIOUS_VERSION=$(git show HEAD~1:package.json | jq -r .version)
           CURRENT_VERSION=$(jq -r .version < package.json)
