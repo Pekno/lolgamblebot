@@ -40,6 +40,7 @@ jobs:
           fi
 
           echo "Version was bumped successfully."
+          echo "VERSION=$CURRENT_VERSION" >> $GITHUB_ENV  # Set the version as an environment variable
       
       # Set up Node.js
       - name: Set up Node.js
@@ -64,10 +65,10 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build -t ${{ vars.DOCKERHUB_IMAGE }}:latest .
-          docker tag ${{ vars.DOCKERHUB_IMAGE }}:latest ${{ vars.DOCKERHUB_IMAGE }}:${{ CURRENT_VERSION }}
+          docker tag ${{ vars.DOCKERHUB_IMAGE }}:latest ${{ vars.DOCKERHUB_IMAGE }}:${{ env.VERSION }}
           
       # Push the Docker image
       - name: Push Docker Image
         run: |
           docker push ${{ vars.DOCKERHUB_IMAGE }}:latest
-          docker push ${{ vars.DOCKERHUB_IMAGE }}:${{ CURRENT_VERSION }}
+          docker push ${{ vars.DOCKERHUB_IMAGE }}:${{ env.VERSION }}
