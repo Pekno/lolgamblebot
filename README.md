@@ -1,5 +1,11 @@
 # ![Logo](logo.png) League of Legends Gamble Bot
 
+<div align="center">
+  
+[![Docker pulls](https://img.shields.io/docker/pulls/pekno/lolgamblebot)](https://hub.docker.com/r/pekno/lolgamblebot)
+  
+</div>
+
 ## Description
 
 League of Legends Gamble Bot is a Discord bot that lets users track Summoners and bet virtual tokens on their game outcomes. Compete with other users to become the richest player on your server by correctly predicting the results of matches.
