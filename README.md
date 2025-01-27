@@ -2,6 +2,7 @@
 
 <div align="center">
   
+![GitHub Tag](https://img.shields.io/github/v/tag/pekno/lolgamblebot?label=latest%20version)
 [![Docker pulls](https://img.shields.io/docker/pulls/pekno/lolgamblebot)](https://hub.docker.com/r/pekno/lolgamblebot)
   
 </div>
