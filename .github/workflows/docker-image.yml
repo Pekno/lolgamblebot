@@ -22,6 +22,12 @@ jobs:
       # Extract the version from the tag
       - id: get_version
         uses: battila7/get-version-action@v2
+
+      # Set the concatenated value as an environment variable
+      - name: Set Docker Repository Name
+        run: |
+          # Concatenate DOCKERHUB_USERNAME and DOCKERHUB_IMAGE to form the image name
+          echo "DOCKER_REPOSITORY=${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_IMAGE }}" >> $GITHUB_ENV
       
       # Set up Node.js
       - name: Set up Node.js
@@ -45,11 +51,11 @@ jobs:
       # Build the Docker image
       - name: Build Docker Image
         run: |
-          docker build -t ${{ vars.DOCKERHUB_IMAGE }}:latest .
-          docker tag ${{ vars.DOCKERHUB_IMAGE }}:latest ${{ vars.DOCKERHUB_IMAGE }}:${{ steps.get_version.outputs.version-without-v }}
+          docker build -t ${{ env.DOCKER_REPOSITORY }}:latest .
+          docker tag ${{ env.DOCKER_REPOSITORY }}:latest ${{ env.DOCKER_REPOSITORY }}:${{ steps.get_version.outputs.version-without-v }}
           
       # Push the Docker image
       - name: Push Docker Image
         run: |
-          docker push ${{ vars.DOCKERHUB_IMAGE }}:latest
-          docker push ${{ vars.DOCKERHUB_IMAGE }}:${{ steps.get_version.outputs.version-without-v }}
+          docker push ${{ env.DOCKER_REPOSITORY }}:latest
+          docker push ${{ env.DOCKER_REPOSITORY }}:${{ steps.get_version.outputs.version-without-v }}
