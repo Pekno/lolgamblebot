@@ -11,6 +11,7 @@ import {
 	ModalBuilder,
 	GatewayIntentBits,
 	MessageFlags,
+	ModalSubmitFields,
 } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
@@ -233,7 +234,9 @@ simpleCommandsList.push(
 			const currentScore = lurker.checkScore(userId);
 
 			const modal = new ModalBuilder()
-				.setCustomId(`bet_modal;${side};${gameId};${currentScore}`)
+				.setCustomId(
+					`bet_modal;side:=${side};gameId:=${gameId};currentScore:=${currentScore}`
+				)
 				.setTitle(
 					i18n.__('display.modal.current', {
 						side: sideToText(side),
@@ -269,14 +272,15 @@ simpleCommandsList.push(
 			client: Client,
 			lurkerService: LurkersService,
 			extraInfo: any,
-			payload: any
+			modalPayload?: ModalSubmitFields
 		) => {
 			const { side, gameId, userId } = extraInfo as {
 				side: Side;
 				gameId: number;
 				userId: string;
 			};
-			const { amount } = payload as { amount: number };
+			if (!modalPayload) throw new LocaleError('error.lurker.wrong_amount');
+			const amount = +modalPayload.getField('amount');
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const lurker = lurkerService.getLurker(interaction);
 			if (Number.isNaN(amount))
