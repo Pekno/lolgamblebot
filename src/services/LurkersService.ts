@@ -1,12 +1,3 @@
-import {
-	Client,
-	Events,
-	GatewayIntentBits,
-	REST,
-	Routes,
-	TextChannel,
-} from 'discord.js';
-import { CommandList } from '../model/DiscordModels';
 import { Lurker } from './Lurker';
 import { CONFIG } from '../config/config';
 import { RiotAPI } from '../api/RiotApi';
@@ -15,123 +6,26 @@ import fs from 'fs';
 import path from 'path';
 import { Save } from '../model/Save';
 import { RiotChampion } from '../model/RiotModels';
-import { Side, sideToText } from '../enum/Side';
-import { LocaleError } from '../model/LocalError';
-import { Loggers } from './LoggerManager';
+import { sideToText } from '../enum/Side';
 import i18n from 'i18n';
+import { Client, Interaction, TextChannel } from 'discord.js';
+import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 
-export class Bot {
+export class LurkersService {
 	private _lurkers: Map<string, Lurker> = new Map<string, Lurker>();
 	private _riotApi: RiotAPI;
 	private _opggApi: OPGGApi;
 	private _client: Client;
 	private _championList: RiotChampion[] = [];
 
-	private register = async (commandList: CommandList) => {
-		this._client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-		if (!CONFIG.DISCORD_TOKEN)
-			throw new LocaleError('error.discord.no_discord_token');
-		if (!CONFIG.DISCORD_ID)
-			throw new LocaleError('error.discord.no_discord_id');
-
-		const rest = new REST({ version: '10' }).setToken(CONFIG.DISCORD_TOKEN);
-		try {
-			await rest.put(Routes.applicationCommands(CONFIG.DISCORD_ID), {
-				body: commandList.build(),
-			});
-			Loggers.get().info('Bot : Successfully loaded application (/) commands.');
-		} catch (e: any) {
-			Loggers.get().error(e, e.stack);
-		}
-
-		this._client.on(Events.InteractionCreate, async (interaction) => {
-			if (!interaction) throw new LocaleError('error.discord.no_interaction');
-			if (!interaction.guildId)
-				throw new LocaleError('error.discord.no_guild_id');
-			try {
-				let action;
-				let payload;
-				if (interaction.isAutocomplete()) {
-					action = `${interaction.commandName}_autocomplete`;
-				} else if (interaction.isStringSelectMenu()) {
-					action = interaction.customId.replace('suno_optionselect_', '');
-					payload = interaction.values[0];
-				} else if (interaction.isButton()) {
-					if (
-						interaction.customId === 'prev' ||
-						interaction.customId === 'next'
-					)
-						return;
-					const [command, side, gameId] = interaction.customId.split(';');
-					action = command;
-					payload = {
-						side: parseInt(side) as Side,
-						gameId: parseInt(gameId),
-						userId: interaction.member?.user.id,
-					};
-				} else if (interaction.isModalSubmit()) {
-					const [command, side, gameId] = interaction.customId.split(';');
-					action = `submit_${command}`;
-					payload = {
-						side: parseInt(side) as Side,
-						gameId: parseInt(gameId),
-						userId: interaction.member?.user.id,
-						amount: parseInt(interaction.fields.getTextInputValue('amount')),
-					};
-				} else if (!interaction.isChatInputCommand()) {
-					return;
-				}
-				// Check lurker
-				let specificLurker = this._lurkers.get(interaction.guildId);
-				if (!specificLurker) {
-					this._lurkers.set(
-						interaction.guildId,
-						this.createAndBindLurker(interaction.guildId)
-					);
-					specificLurker = this._lurkers.get(interaction.guildId);
-				}
-				if (!specificLurker)
-					throw new LocaleError('error.lurker.no_server_lurker');
-				await commandList.execute(
-					interaction,
-					this._client,
-					specificLurker,
-					action,
-					payload
-				);
-			} catch (e: any) {
-				Loggers.get().error(e, e.stack);
-				if (e.code !== 10062) {
-					if ('deferred' in interaction && interaction.deferred) {
-						await interaction.editReply({
-							content: `⚠️ __${e.message.substring(0, 1_500)}__ ⚠️`,
-						});
-					} else {
-						if ('reply' in interaction)
-							await interaction.reply({
-								content: `⚠️ __${e.message.substring(0, 1_500)}__ ⚠️`,
-								ephemeral: true,
-							});
-					}
-				}
-			}
-		});
-		await this._client.login(CONFIG.DISCORD_TOKEN);
-	};
-
-	start = async (commandList: CommandList) => {
-		if (!commandList)
-			throw new LocaleError('error.discord.no_configured_command');
-		await this.register(commandList);
-
+	start = async () => {
+		// Getting updated champion list
 		this._championList = await this._opggApi.getChampionList(CONFIG.LOCALE);
 		if (!this._championList?.length)
 			throw new LocaleError('error.opgg.no_champions_list');
 		Loggers.get().info(
 			`Bot : Retrieved all ${this._championList.length} champions`
 		);
-
 		// Recreate Lurkers from save datafile
 		const files = fs.readdirSync(CONFIG.SAVED_DATA_PATH);
 		const filteredFiles = files.filter(
@@ -152,6 +46,26 @@ export class Bot {
 		const lurker = this.createAndBindLurker(data.guildId);
 		this._lurkers.set(data.guildId, lurker);
 		await lurker.start(data.channelId, data);
+	};
+
+	public getLurker = (interaction: Interaction) => {
+		if (!interaction) throw new LocaleError('error.discord.no_interaction');
+		if (!interaction.guildId)
+			throw new LocaleError('error.discord.no_guild_id');
+		let specificLurker = this._lurkers.get(interaction.guildId);
+		if (!specificLurker) {
+			this._lurkers.set(
+				interaction.guildId,
+				this.createAndBindLurker(interaction.guildId)
+			);
+			specificLurker = this._lurkers.get(interaction.guildId);
+		}
+		if (!specificLurker) throw new LocaleError('error.lurker.no_server_lurker');
+		return specificLurker;
+	};
+
+	public setClient = (client: Client) => {
+		this._client = client;
 	};
 
 	private getChannel = async (lurker: Lurker): Promise<TextChannel | null> => {

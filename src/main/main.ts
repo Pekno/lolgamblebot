@@ -1,14 +1,5 @@
 import { SpecificRegion } from '../enum/SpecificRegion';
 import {
-	ButtonCommand,
-	Command,
-	CommandList,
-	CommandOption,
-	ModalSubmitCommand,
-} from '../model/DiscordModels';
-import { Bot } from '../services/Bot';
-import { Lurker } from '../services/Lurker';
-import {
 	Client,
 	ApplicationCommandOptionType,
 	ChatInputCommandInteraction,
@@ -18,14 +9,25 @@ import {
 	ActionRowBuilder,
 	TextInputBuilder,
 	ModalBuilder,
+	GatewayIntentBits,
+	MessageFlags,
 } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import i18n from 'i18n';
 import { CONFIG } from '../config/config';
-import { LocaleError } from '../model/LocalError';
 import { Side, sideToText } from '../enum/Side';
-import { Loggers } from '../services/LoggerManager';
+import { LurkersService } from '../services/LurkersService';
+import {
+	ButtonCommand,
+	Command,
+	CommandList,
+	CommandOption,
+	LocaleError,
+	Loggers,
+	ModalSubmitCommand,
+	SimpleDiscordBot,
+} from '@pekno/simple-discordbot';
 
 const localesPath = path.resolve(__dirname, '../locales');
 const files = fs.readdirSync(localesPath);
@@ -51,38 +53,53 @@ const regionOption = Object.keys(SpecificRegion).map((v, i) => {
 	};
 });
 
-const commandsList = new CommandList();
-commandsList.push(
+const lurkerService = new LurkersService();
+const simpleBot = new SimpleDiscordBot<LurkersService>(
+	{
+		discord_token: CONFIG.DISCORD_TOKEN ?? '',
+		discord_id: CONFIG.DISCORD_ID ?? '',
+		intents: [GatewayIntentBits.Guilds],
+		locale: CONFIG.LOCALE,
+		available_locale: localList,
+		locale_directory: localesPath,
+	},
+	lurkerService
+);
+
+const simpleCommandsList = new CommandList<LurkersService>();
+simpleCommandsList.push(
 	new Command({
 		name: 'start',
 		description: i18n.__('display.command.start.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
-			lurker: Lurker
+			lurkerService: LurkersService
 		) => {
-			await interaction.deferReply();
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const lurker = lurkerService.getLurker(interaction);
 			await lurker.start(interaction.channelId);
 			await interaction.editReply(i18n.__('display.command.start.reply'));
 		},
 	})
 );
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'stop',
 		description: i18n.__('display.command.stop.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
-			lurker: Lurker
+			lurkerService: LurkersService
 		) => {
-			await interaction.deferReply();
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const lurker = lurkerService.getLurker(interaction);
 			await lurker.stop();
 			await interaction.editReply(i18n.__('display.command.stop.reply'));
 		},
 	})
 );
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'add',
 		description: i18n.__('display.command.add.description'),
@@ -104,9 +121,10 @@ commandsList.push(
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
-			lurker: Lurker
+			lurkerService: LurkersService
 		) => {
-			await interaction.deferReply();
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const lurker = lurkerService.getLurker(interaction);
 			const summonerName = interaction.options.getString('summoner_name');
 			const summonerRegion = interaction.options.getString(
 				'summoner_region'
@@ -120,7 +138,7 @@ commandsList.push(
 		},
 	})
 );
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'remove',
 		description: i18n.__('display.command.remove.description'),
@@ -142,9 +160,10 @@ commandsList.push(
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
-			lurker: Lurker
+			lurkerService: LurkersService
 		) => {
-			await interaction.deferReply();
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const lurker = lurkerService.getLurker(interaction);
 			const summonerName = interaction.options.getString('summoner_name');
 			const summonerRegion = interaction.options.getString(
 				'summoner_region'
@@ -158,65 +177,66 @@ commandsList.push(
 		},
 	})
 );
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'list',
 		description: i18n.__('display.command.list.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
-			lurker: Lurker
+			lurkerService: LurkersService
 		) => {
-			await interaction.deferReply();
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const lurker = lurkerService.getLurker(interaction);
 			const summonerText = lurker.getSummoners();
 			await interaction.editReply(
-				i18n.__('display.command.remove.description', {
+				i18n.__('display.command.list.reply', {
 					summonerText: summonerText,
 				})
 			);
 		},
 	})
 );
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'scoreboard',
 		description: i18n.__('display.command.scoreboard.description'),
 		execute: async (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
-			lurker: Lurker
+			lurkerService: LurkersService
 		) => {
-			await interaction.deferReply();
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const lurker = lurkerService.getLurker(interaction);
 			await interaction.editReply({
 				embeds: [await lurker.buildEmbedScoreboard(client)],
 			});
 		},
 	})
 );
-commandsList.push(
+simpleCommandsList.push(
 	new ButtonCommand({
 		name: 'button_bet',
 		execute: async (
 			interaction: ButtonInteraction,
 			client: Client,
-			lurker: Lurker,
-			byPassParameters: {
+			lurkerService: LurkersService,
+			extraInfo: any
+		) => {
+			const { side, gameId, userId } = extraInfo as {
 				side: Side;
 				gameId: number;
 				userId: string;
-			}
-		) => {
-			if (!byPassParameters?.userId)
-				throw new LocaleError('error.discord.wrong_userId');
-			const currentScore = lurker.checkScore(byPassParameters.userId);
+			};
+			if (!userId) throw new LocaleError('error.discord.wrong_userId');
+			const lurker = lurkerService.getLurker(interaction);
+			const currentScore = lurker.checkScore(userId);
 
 			const modal = new ModalBuilder()
-				.setCustomId(
-					`bet_modal;${byPassParameters.side};${byPassParameters.gameId};${currentScore}`
-				)
+				.setCustomId(`bet_modal;${side};${gameId};${currentScore}`)
 				.setTitle(
 					i18n.__('display.modal.current', {
-						side: sideToText(byPassParameters.side),
+						side: sideToText(side),
 					})
 				);
 
@@ -241,43 +261,46 @@ commandsList.push(
 		},
 	})
 );
-commandsList.push(
+simpleCommandsList.push(
 	new ModalSubmitCommand({
 		name: 'submit_bet_modal',
 		execute: async (
 			interaction: ModalSubmitInteraction,
 			client: Client,
-			lurker: Lurker,
-			byPassParameters: {
+			lurkerService: LurkersService,
+			extraInfo: any,
+			payload: any
+		) => {
+			const { side, gameId, userId } = extraInfo as {
 				side: Side;
 				gameId: number;
 				userId: string;
-				amount: number;
-			}
-		) => {
-			await interaction.deferReply({ ephemeral: true });
-			if (Number.isNaN(byPassParameters?.amount))
+			};
+			const { amount } = payload as { amount: number };
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const lurker = lurkerService.getLurker(interaction);
+			if (Number.isNaN(amount))
 				throw new LocaleError('error.lurker.wrong_amount', {
-					amount: `${byPassParameters.amount}`,
+					amount: `${amount}`,
 				});
-			if (byPassParameters?.amount <= 0)
+			if (amount <= 0)
 				throw new LocaleError('error.lurker.positive_amount', {
-					amount: `${byPassParameters.amount}`,
+					amount: `${amount}`,
 				});
-			if (!byPassParameters?.userId)
-				throw new LocaleError('error.discord.wrong_userId');
-			const wagerText = await lurker.setBet(
-				byPassParameters.gameId,
-				byPassParameters.userId,
-				byPassParameters.amount,
-				byPassParameters.side
-			);
+			if (!userId) throw new LocaleError('error.discord.wrong_userId');
+			const wagerText = await lurker.setBet(gameId, userId, amount, side);
 			interaction.editReply({ content: wagerText });
 		},
 	})
 );
 
-const bot = new Bot();
-bot.start(commandsList).catch((e: any) => {
-	Loggers.get().error(e, e.stack);
+lurkerService.start().then(() => {
+	simpleBot
+		.start(simpleCommandsList)
+		.then((client) => {
+			lurkerService.setClient(client);
+		})
+		.catch((e: any) => {
+			Loggers.get().error(e, e.stack);
+		});
 });

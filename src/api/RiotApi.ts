@@ -3,8 +3,7 @@ import { OutCome } from '../model/OutCome';
 import { SpecificRegion } from '../enum/SpecificRegion';
 import { Summoner } from '../model/Summoner';
 import { RegionMap } from '../config/RegionMap';
-import { MainApi } from './MainApi';
-import { LocaleError } from '../model/LocalError';
+import { LocaleError, MainApi } from '@pekno/simple-discordbot';
 
 export class RiotAPI extends MainApi {
 	cleanupSummonerName = (

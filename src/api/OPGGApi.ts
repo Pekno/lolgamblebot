@@ -1,8 +1,7 @@
 import { Summoner } from '../model/Summoner';
 import { RiotChampion } from '../model/RiotModels';
 import { GameType } from '../enum/GameType';
-import { MainApi } from './MainApi';
-import { LocaleError } from '../model/LocalError';
+import { LocaleError, MainApi } from '@pekno/simple-discordbot';
 
 const locales: { [key: string]: string } = {
 	AF: 'af_ZA', // Afrikaans (South Africa)

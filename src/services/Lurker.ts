@@ -16,8 +16,7 @@ import { Side, sideToShortText } from '../enum/Side';
 import { SpecificRegion } from '../enum/SpecificRegion';
 import { LurkerStatus } from '../enum/LurkerStatus';
 import { gameModeToType } from '../enum/GameType';
-import { Loggers } from './LoggerManager';
-import { LocaleError } from '../model/LocalError';
+import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 
 export class Lurker {
 	private _wagerList: Map<number, Wager> = new Map<number, Wager>();
