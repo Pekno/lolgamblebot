@@ -280,7 +280,7 @@ simpleCommandsList.push(
 				userId: string;
 			};
 			if (!modalPayload) throw new LocaleError('error.lurker.wrong_amount');
-			const amount = +modalPayload.getField('amount');
+			const amount = +modalPayload.getField('amount').value;
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const lurker = lurkerService.getLurker(interaction);
 			if (Number.isNaN(amount))
