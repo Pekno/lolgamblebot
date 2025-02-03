@@ -171,7 +171,7 @@ export class Wager {
 		}
 
 		const blueSide = new ButtonBuilder()
-			.setCustomId(`button_bet;${Side.BLUE};${this.gameId}`)
+			.setCustomId(`bet;${Side.BLUE};${this.gameId}`)
 			.setLabel(
 				`${i18n.__('display.side.blue_side')} | ${total[Side.BLUE]} ${CONFIG.CURRENCY}`
 			)
@@ -179,7 +179,7 @@ export class Wager {
 			.setDisabled(this.isWagerLocked);
 
 		const redSide = new ButtonBuilder()
-			.setCustomId(`button_bet;${Side.RED};${this.gameId}`)
+			.setCustomId(`bet;${Side.RED};${this.gameId}`)
 			.setLabel(
 				`${i18n.__('display.side.red_side')} | ${total[Side.RED]} ${CONFIG.CURRENCY}`
 			)

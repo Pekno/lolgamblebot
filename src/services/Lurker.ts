@@ -126,11 +126,17 @@ export class Lurker {
 		byPassSave: boolean = false
 	) => {
 		for (const summoner of summoners) {
-			await this.addSummoner(
-				summoner.wholeGameName,
-				summoner.region,
-				byPassSave
-			);
+			try {
+				await this.addSummoner(
+					summoner.wholeGameName,
+					summoner.region,
+					byPassSave
+				);
+			} catch (e) {
+				Loggers.get().error(
+					`Cannot add this summoner : ${summoner.wholeGameName} : ${e}`
+				);
+			}
 		}
 	};
 

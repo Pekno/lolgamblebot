@@ -26,6 +26,9 @@ export class LurkersService {
 		Loggers.get().info(
 			`Bot : Retrieved all ${this._championList.length} champions`
 		);
+	};
+
+	public restoreAll = async () => {
 		// Recreate Lurkers from save datafile
 		const files = fs.readdirSync(CONFIG.SAVED_DATA_PATH);
 		const filteredFiles = files.filter(
@@ -39,7 +42,7 @@ export class LurkersService {
 		}
 	};
 
-	restore = async (guildId: string) => {
+	private restore = async (guildId: string) => {
 		const data = JSON.parse(
 			fs.readFileSync(`${CONFIG.SAVED_DATA_PATH}/${guildId}.json`, 'utf8')
 		) as Save;

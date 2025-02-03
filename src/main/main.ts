@@ -301,8 +301,9 @@ simpleCommandsList.push(
 lurkerService.start().then(() => {
 	simpleBot
 		.start(simpleCommandsList)
-		.then((client) => {
+		.then(async (client) => {
 			lurkerService.setClient(client);
+			await lurkerService.restoreAll();
 		})
 		.catch((e: any) => {
 			Loggers.get().error(e, e.stack);
