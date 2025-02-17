@@ -230,14 +230,11 @@ simpleCommandsList.push(
 			lurkerService: LurkersService,
 			extraInfo: any
 		) => {
-			const { side, gameId, userId } = extraInfo as {
-				side: Side;
-				gameId: number;
-				userId: string;
-			};
-			if (!userId) throw new LocaleError('error.discord.wrong_userId');
+			const { side, gameId } = extraInfo;
+			if (!interaction.user.id)
+				throw new LocaleError('error.discord.wrong_userId');
 			const lurker = lurkerService.getLurker(interaction);
-			const currentScore = lurker.checkScore(userId);
+			const currentScore = lurker.checkScore(interaction.user.id);
 
 			const modal = new ModalBuilder()
 				.setCustomId(
@@ -245,7 +242,7 @@ simpleCommandsList.push(
 				)
 				.setTitle(
 					i18n.__('display.modal.current', {
-						side: sideToText(side),
+						side: sideToText(side as Side),
 					})
 				);
 
@@ -280,14 +277,10 @@ simpleCommandsList.push(
 			extraInfo: any,
 			modalPayload?: ModalSubmitFields
 		) => {
-			const { side, gameId, userId } = extraInfo as {
-				side: Side;
-				gameId: number;
-				userId: string;
-			};
+			const { side, gameId } = extraInfo;
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			if (!modalPayload) throw new LocaleError('error.lurker.wrong_amount');
 			const amount = +modalPayload.getField('amount').value;
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const lurker = lurkerService.getLurker(interaction);
 			if (Number.isNaN(amount))
 				throw new LocaleError('error.lurker.wrong_amount', {
@@ -297,8 +290,14 @@ simpleCommandsList.push(
 				throw new LocaleError('error.lurker.positive_amount', {
 					amount: `${amount}`,
 				});
-			if (!userId) throw new LocaleError('error.discord.wrong_userId');
-			const wagerText = await lurker.setBet(gameId, userId, amount, side);
+			if (!interaction.user.id)
+				throw new LocaleError('error.discord.wrong_userId');
+			const wagerText = await lurker.setBet(
+				+gameId,
+				interaction.user.id,
+				amount,
+				side as Side
+			);
 			interaction.editReply({ content: wagerText });
 		},
 	})

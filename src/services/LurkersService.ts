@@ -104,12 +104,21 @@ export class LurkersService {
 			if (!channel) return;
 			if (!wager.messageId) return;
 
-			wager.message = await channel.messages.fetch(wager.messageId);
-			if (!wager.message) return;
-			await wager.message.edit({
-				embeds: [wager.buildEmbed()],
-				components: [wager.buildButton()],
-			});
+			try {
+				wager.message = await channel.messages.fetch(wager.messageId);
+				if (!wager.message) return;
+				await wager.message.edit({
+					embeds: [wager.buildEmbed()],
+					components: [wager.buildButton()],
+				});
+			} catch (e) {
+				// if message have been deleted, resend one
+				Loggers.get().warn(e);
+				wager.message = await channel.send({
+					embeds: [wager.buildEmbed()],
+					components: [wager.buildButton()],
+				});
+			}
 		});
 		lurker.on('updateWager', async (wager) => {
 			const channel = await this.getChannel(lurker);

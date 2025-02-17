@@ -59,6 +59,10 @@ export class Lurker {
 		this.save();
 	};
 
+	removeWager = (gameId: number) => {
+		this._wagerList.delete(gameId);
+	};
+
 	getWager = (gameId: number): Wager | undefined => {
 		return this._wagerList.get(gameId);
 	};
