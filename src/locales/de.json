@@ -92,7 +92,7 @@
 					"summoner_name": "Name des hinzuzufügenden Beschwörers im Format <AAAAA#BBB>"
 				},
 				"description": "Einen neuen Beschwörer zur Überwachung hinzufügen",
-				"reply": "{{summonerName}} wurde zur Überwachungsliste hinzugefügt"
+				"reply": "{{summonerHyperlink}} wurde zur Überwachungsliste hinzugefügt"
 			},
 			"remove": {
 				"params": {
@@ -100,11 +100,11 @@
 					"summoner_name": "Name des zu entfernenden Beschwörers im Format <AAAAA#BBB>"
 				},
 				"description": "Einen Beschwörer von der Überwachungsliste entfernen",
-				"reply": "{{summonerName}} wurde von der Überwachungsliste entfernt"
+				"reply": "{{summonerHyperlink}} wurde von der Überwachungsliste entfernt"
 			},
 			"list": {
 				"description": "Erhalten Sie die Beschwörer aus der Überwachungsliste",
-				"reply": "Beobachtete Beschwörer: {{summonerText}}"
+				"reply": "Beobachtete Beschwörer: {{summonerHyperlink}}"
 			},
 			"scoreboard": {
 				"description": "Das Scoreboard vom Bot abrufen"

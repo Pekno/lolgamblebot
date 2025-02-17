@@ -93,7 +93,7 @@
 					"summoner_name": "nom de l'invocateur à ajouter comme <AAAAA#BBB>"
 				},
 				"description": "Ajouter un nouvel invocateur à surveiller",
-				"reply": "Ajouté {{summonerName}} à la liste de surveillance"
+				"reply": "Ajouté {{summonerHyperlink}} à la liste de surveillance"
 			},
 			"remove": {
 				"params": {
@@ -101,11 +101,11 @@
 					"summoner_name": "nom de l'invocateur à retirer comme <AAAAA#BBB>"
 				},
 				"description": "Supprimer un invocateur de la liste de surveillance",
-				"reply": "Retiré {{summonerName}} de la liste de surveillance"
+				"reply": "Retiré {{summonerHyperlink}} de la liste de surveillance"
 			},
 			"list": {
 				"description": "Obtenez la liste des invocateurs surveillés",
-				"reply": "Surveillance des Invocateurs : {{summonerText}}"
+				"reply": "Surveillance des Invocateurs : {{summonerHyperlink}}"
 			},
 			"scoreboard": {
 				"description": "Obtenez le tableau des scores du bot"

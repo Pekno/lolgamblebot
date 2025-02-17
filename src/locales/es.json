@@ -92,7 +92,7 @@
 					"summoner_name": "nombre del invocador a añadir como <AAAAA#BBB>"
 				},
 				"description": "Añadir un nuevo invocador para verificar",
-				"reply": "{{summonerName}} ha sido añadido a la lista de verificación"
+				"reply": "{{summonerHyperlink}} ha sido añadido a la lista de verificación"
 			},
 			"remove": {
 				"params": {
@@ -100,11 +100,11 @@
 					"summoner_name": "nombre del invocador a eliminar como <AAAAA#BBB>"
 				},
 				"description": "Eliminar un invocador de la lista de verificación",
-				"reply": "{{summonerName}} ha sido eliminado de la lista de verificación"
+				"reply": "{{summonerHyperlink}} ha sido eliminado de la lista de verificación"
 			},
 			"list": {
 				"description": "Obtener los invocadores de la lista de verificación",
-				"reply": "Viendo estos invocadores: {{summonerText}}"
+				"reply": "Viendo estos invocadores: {{summonerHyperlink}}"
 			},
 			"scoreboard": {
 				"description": "Obtener el marcador del bot"

@@ -234,7 +234,7 @@ export class Wager {
 		} else {
 			title += `${i18n.__('display.wager.game_started')} ${new Date(this.gameData.gameStartTime).toLocaleString()}`;
 			endText += `${i18n.__('display.wager.who_win')}`;
-			url = `https://porofessor.gg/live/${region.toLocaleLowerCase()}/${this.participants[0].summoner.gameName.replace(/ /g, '+')}-${this.participants[0].summoner.tagLine.replace(/ /g, '+')}`;
+			url = this.participants[0].summoner.LoGLink;
 		}
 
 		const odds = this.calculateOdds();

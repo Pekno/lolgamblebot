@@ -92,7 +92,7 @@
 					"summoner_name": "nome dell'evocatore da aggiungere come <AAAAA#BBB>"
 				},
 				"description": "Aggiungi un nuovo evocatore da controllare",
-				"reply": "{{summonerName}} è stato aggiunto alla lista di controllo"
+				"reply": "{{summonerHyperlink}} è stato aggiunto alla lista di controllo"
 			},
 			"remove": {
 				"params": {
@@ -100,11 +100,11 @@
 					"summoner_name": "nome dell'evocatore da rimuovere come <AAAAA#BBB>"
 				},
 				"description": "Rimuovi un evocatore dalla lista di controllo",
-				"reply": "{{summonerName}} è stato rimosso dalla lista di controllo"
+				"reply": "{{summonerHyperlink}} è stato rimosso dalla lista di controllo"
 			},
 			"list": {
 				"description": "Ottieni gli evocatori dalla lista di controllo",
-				"reply": "Guardando questi evocatori: {{summonerText}}"
+				"reply": "Guardando questi evocatori: {{summonerHyperlink}}"
 			},
 			"scoreboard": {
 				"description": "Ottieni la classifica dal bot"

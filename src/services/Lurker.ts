@@ -88,7 +88,7 @@ export class Lurker {
 		summonerName: string | null,
 		summonerRegion: SpecificRegion,
 		byPassSave: boolean = false
-	) => {
+	): Promise<Summoner | null> => {
 		if (!summonerName) throw new LocaleError('error.lurker.no_summoner');
 		const summ = this._riotApi.cleanupSummonerName(
 			summonerName,
@@ -110,7 +110,7 @@ export class Lurker {
 			Loggers.get(this.guildId).info(
 				`Lurker ${this.guildId} : Can't retrive summoner from Riot API, deleted if already existed`
 			);
-			return;
+			return summFromOnline;
 		}
 		const compSumm = await this._opggApi.getSummonerInfo(summFromOnline);
 		if (!compSumm) throw new LocaleError('error.opgg.no_summoner');
@@ -119,6 +119,7 @@ export class Lurker {
 		);
 		this._summoners.push(compSumm);
 		if (!byPassSave) this.save();
+		return compSumm;
 	};
 
 	addSummoners = async (
@@ -140,8 +141,8 @@ export class Lurker {
 		}
 	};
 
-	getSummoners = (): string => {
-		return this._summoners.map((s) => `${s.wholeGameName}`).join(', ');
+	getSummonersHyperlink = (): string => {
+		return this._summoners.map((s) => s.hyperlink).join(', ');
 	};
 
 	buildEmbedScoreboard = async (client: Client): Promise<EmbedBuilder> => {
@@ -209,7 +210,7 @@ export class Lurker {
 	removeSummoner = (
 		summonerName: string | null,
 		summonerRegion: SpecificRegion
-	) => {
+	): Summoner | null => {
 		if (!summonerName) throw new LocaleError('error.lurker.no_summoner');
 		const summ = this._riotApi.cleanupSummonerName(
 			summonerName,
@@ -225,13 +226,14 @@ export class Lurker {
 			Loggers.get(this.guildId).info(
 				`Lurker ${this.guildId} : Summoner ${summ.wholeGameName} is not present in the check list`
 			);
-			return;
+			throw new LocaleError('error.lurker.no_summoner');
 		}
 		this._summoners.splice(exactSumm, 1);
 		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Removing ${summ.wholeGameName} to checkList`
 		);
 		this.save();
+		return summ;
 	};
 
 	checkWagersGame = async () => {

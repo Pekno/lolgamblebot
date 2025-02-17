@@ -130,11 +130,13 @@ simpleCommandsList.push(
 			const summonerRegion = interaction.options.getString(
 				'summoner_region'
 			) as SpecificRegion;
-			await lurker.addSummoner(summonerName, summonerRegion);
+			const summ = await lurker.addSummoner(summonerName, summonerRegion);
 			await interaction.editReply(
-				i18n.__('display.command.add.reply', {
-					summonerName: summonerName ?? '??',
-				})
+				unescapeHTML(
+					i18n.__('display.command.add.reply', {
+						summonerHyperlink: summ?.hyperlink ?? '??',
+					})
+				)
 			);
 		},
 	})
@@ -169,11 +171,13 @@ simpleCommandsList.push(
 			const summonerRegion = interaction.options.getString(
 				'summoner_region'
 			) as SpecificRegion;
-			lurker.removeSummoner(summonerName, summonerRegion);
+			const summ = lurker.removeSummoner(summonerName, summonerRegion);
 			await interaction.editReply(
-				i18n.__('display.command.remove.reply', {
-					summonerName: summonerName ?? '??',
-				})
+				unescapeHTML(
+					i18n.__('display.command.remove.reply', {
+						summonerHyperlink: summ?.hyperlink ?? '??',
+					})
+				)
 			);
 		},
 	})
@@ -189,11 +193,13 @@ simpleCommandsList.push(
 		) => {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const lurker = lurkerService.getLurker(interaction);
-			const summonerText = lurker.getSummoners();
+			const summonerText = lurker.getSummonersHyperlink();
 			await interaction.editReply(
-				i18n.__('display.command.list.reply', {
-					summonerText: summonerText,
-				})
+				unescapeHTML(
+					i18n.__('display.command.list.reply', {
+						summonerHyperlink: summonerText,
+					})
+				)
 			);
 		},
 	})
@@ -309,3 +315,21 @@ lurkerService.start().then(() => {
 			Loggers.get().error(e, e.stack);
 		});
 });
+
+function unescapeHTML(str: string): string {
+	const htmlEntities: { [key: string]: string } = {
+		'&#x2F;': '/', // Handle URL forward slash encoded as &#x2F;
+		'&lt;': '<', // Less than symbol
+		'&gt;': '>', // Greater than symbol
+		'&amp;': '&', // Ampersand
+		'&quot;': '"', // Double quote
+		'&apos;': "'", // Single quote
+		// Add other entities if necessary
+	};
+
+	// Replace all known HTML entities with their actual characters
+	return str.replace(
+		/&#x2F;|&lt;|&gt;|&amp;|&quot;|&apos;/g,
+		(match) => htmlEntities[match] || match
+	);
+}
