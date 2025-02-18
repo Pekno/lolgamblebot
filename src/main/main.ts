@@ -242,7 +242,7 @@ simpleCommandsList.push(
 				)
 				.setTitle(
 					i18n.__('display.modal.current', {
-						side: sideToText(side as Side),
+						side: sideToText(+side as Side),
 					})
 				);
 
@@ -296,7 +296,7 @@ simpleCommandsList.push(
 				+gameId,
 				interaction.user.id,
 				amount,
-				side as Side
+				+side as Side
 			);
 			interaction.editReply({ content: wagerText });
 		},

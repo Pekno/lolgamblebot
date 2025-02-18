@@ -16,7 +16,7 @@ import { Side, sideToShortText, sideToText } from '../enum/Side';
 import { SpecificRegion } from '../enum/SpecificRegion';
 import { gameModeToType } from '../enum/GameType';
 import i18n from 'i18n';
-import { endTypeToText } from '../enum/EndType';
+import { EndType, endTypeToText } from '../enum/EndType';
 
 export class Wager {
 	gameData: RiotGameData;
@@ -202,7 +202,8 @@ export class Wager {
 					(part) => part.puuid === p.summoner.puuid
 				);
 				if (stats) {
-					minionStats = `${stats.totalMinionsKilled} ${i18n.__('display.wager.creeps')}`;
+					const jglMonster = +stats.neutralMinionsKilled;
+					minionStats = `${+stats.totalMinionsKilled} ${jglMonster ? '(' + jglMonster + ' jgl)' : ''} ${i18n.__('display.wager.creeps')}`;
 					kdaStats = `${stats.kills}/${stats.deaths}/${stats.assists}`;
 				}
 			}
@@ -220,7 +221,14 @@ export class Wager {
 			fields.push({ name: kdaStats, value: minionStats, inline: true });
 		}
 
-		let title = this.isWagerLocked ? '🔒' : '🔓';
+		let title =
+			this?.outcome?.endType == EndType.REMAKE
+				? '🎲'
+				: this?.outcome?.endType == EndType.SURRENDER
+					? '🏳️'
+					: this.isWagerLocked
+						? '🔒'
+						: '🔓';
 		title += ' ';
 		let endText = '';
 		let url;
@@ -234,7 +242,7 @@ export class Wager {
 		} else {
 			title += `${i18n.__('display.wager.game_started')} ${new Date(this.gameData.gameStartTime).toLocaleString()}`;
 			endText += `${i18n.__('display.wager.who_win')}`;
-			url = this.participants[0].summoner.LoGLink;
+			url = this.participants[0].summoner.PorofessorLink;
 		}
 
 		const odds = this.calculateOdds();
@@ -244,7 +252,7 @@ export class Wager {
 			.setTitle(title)
 			.setThumbnail(this.participants[0].champion.image_url)
 			.setDescription(
-				`${i18n.__(`display.wager.gametype.${gameModeToType(this.gameData.gameMode)}`)} - _${this.completeGameId}_\n~ ${i18n.__('display.wager.known_participants')} :`
+				`${i18n.__(`display.wager.gametype.${gameModeToType(this.gameData.gameMode)}`)} - ${this.completeGameId}\n~ ${i18n.__('display.wager.known_participants')} :`
 			)
 			.setAuthor({ name: 'LoLGambleBot' })
 			.addFields(fields)

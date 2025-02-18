@@ -69,4 +69,5 @@ A Docker image is also available via [Docker Hub](https://hub.docker.com/r/pekno
 - [x] Make one log file per Lurker/Guild
 - [x] Add one combined error log
 - [x] Make all response defered
+- [x] Added hyperlink to LoG profiles
 - [ ] Improve / Rework Winning odds computation

@@ -17,6 +17,10 @@ export class Summoner {
 		return `https://www.leagueofgraphs.com/summoner/${this.region.toLocaleLowerCase().replace(/[0-9]/g, '')}/${this.gameName.replace(/ /g, '+')}-${this.tagLine.replace(/ /g, '+')}`;
 	}
 
+	get PorofessorLink(): string {
+		return `https://porofessor.gg/live/${this.region.toLocaleLowerCase().replace(/[0-9]/g, '')}/${this.gameName.replace(/ /g, '+')}-${this.tagLine.replace(/ /g, '+')}`;
+	}
+
 	get hyperlink(): string {
 		return `[${this.wholeGameName}](${this.LoGLink})`;
 	}
