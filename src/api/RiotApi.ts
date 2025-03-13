@@ -4,6 +4,7 @@ import { SpecificRegion } from '../enum/SpecificRegion';
 import { Summoner } from '../model/Summoner';
 import { RegionMap } from '../config/RegionMap';
 import { LocaleError, MainApi } from '@pekno/simple-discordbot';
+import { buildRiotApiUrl, RiotEndpointPath } from '../constants/endpoints';
 
 export class RiotAPI extends MainApi {
 	cleanupSummonerName = (
@@ -30,9 +31,18 @@ export class RiotAPI extends MainApi {
 			if (!summ.gameName || !summ.tagLine || !summ.region)
 				throw new LocaleError('error.riot.missing_summoner_field');
 			const parentRegion = RegionMap[summonerRegion];
-			const response = await this.get(
-				`https://${parentRegion}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${summ.gameName}/${summ.tagLine}`
+
+			// Use the endpoint builder to create the URL
+			const url = buildRiotApiUrl(
+				parentRegion,
+				RiotEndpointPath.ACCOUNT_BY_RIOT_ID,
+				{
+					gameName: summ.gameName,
+					tagLine: summ.tagLine,
+				}
 			);
+			const response = await this.get(url);
+
 			summ.puuid = response.data.puuid;
 			summ.gameName = response.data.gameName;
 			summ.tagLine = response.data.tagLine;
@@ -52,9 +62,13 @@ export class RiotAPI extends MainApi {
 			if (!region || !completeGameId)
 				throw new LocaleError('error.riot.no_region_or_gameid');
 			const parentRegion = RegionMap[region];
-			const response = await this.get(
-				`https://${parentRegion}.api.riotgames.com/lol/match/v5/matches/${completeGameId}`
-			);
+
+			// Use the endpoint builder to create the URL
+			const url = buildRiotApiUrl(parentRegion, RiotEndpointPath.MATCH_BY_ID, {
+				gameId: completeGameId,
+			});
+			const response = await this.get(url);
+
 			return new OutCome({
 				matchData: response.data,
 			});
@@ -62,7 +76,7 @@ export class RiotAPI extends MainApi {
 			// If status code is 404 in API, then match file not found
 			if (error?.response?.data) {
 				const data = error?.response?.data;
-				if (data?.status?.status_code === 404) return null;
+				if (data?.httpStatus === 404) return null;
 				if (data?.status && JSON.parse(data)?.status?.status_code === 404)
 					return null;
 			}
@@ -74,15 +88,23 @@ export class RiotAPI extends MainApi {
 		try {
 			if (!summoner.puuid)
 				new LocaleError('error.riot.missing_summorner_puuid');
-			const response = await this.get(
-				`https://${summoner.region}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${summoner.puuid}`
+
+			// Use the endpoint builder to create the URL
+			const url = buildRiotApiUrl(
+				summoner.region,
+				RiotEndpointPath.ACTIVE_GAME_BY_SUMMONER,
+				{
+					puuid: summoner.puuid,
+				}
 			);
+			const response = await this.get(url);
+
 			return response.data as RiotGameData;
 		} catch (error: any) {
 			// If status code is 404 in API, then summoner is not in game
 			if (error?.response?.data) {
 				const data = error?.response?.data;
-				if (data?.status?.status_code === 404) return null;
+				if (data?.httpStatus === 404) return null;
 			}
 			throw error;
 		}

@@ -1,7 +1,12 @@
 import { Summoner } from '../model/Summoner';
 import { RiotChampion } from '../model/RiotModels';
 import { GameType } from '../enum/GameType';
-import { LocaleError, MainApi } from '@pekno/simple-discordbot';
+import { LocaleError, MainApi, Loggers } from '@pekno/simple-discordbot';
+import {
+	buildOPGGApiUrl,
+	CURRENT_SEASON_ID,
+	OPGGEndpointPath,
+} from '../constants/endpoints';
 
 const locales: { [key: string]: string } = {
 	AF: 'af_ZA', // Afrikaans (South Africa)
@@ -67,16 +72,12 @@ export class OPGGApi extends MainApi {
 		const response = await this.get(
 			`https://www.op.gg/summoners/${region}/${summ.gameName}-${summ.tagLine}`
 		);
-		const regex =
-			/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/;
+		const regex = /\\"summonerId\\":\\"([^"]+)\\"/;
 		const match = response.data.match(regex);
 
 		if (match && match[1]) {
-			const jsonData = JSON.parse(match[1]);
-			if (jsonData?.props?.pageProps?.data?.summoner_id) {
-				summ.opggid = jsonData.props.pageProps.data.summoner_id;
-				return summ;
-			}
+			summ.opggid = match[1];
+			return summ;
 		}
 		throw new LocaleError('error.opgg.no_opggid');
 	};
@@ -94,31 +95,63 @@ export class OPGGApi extends MainApi {
 		champion: RiotChampion
 	): Promise<number> => {
 		let response;
+		let url: string;
 		const region = summ.region.toString().replace(/[0-9]*/g, '');
-		switch (gameType) {
-			case GameType.SOLORANKED:
-			case GameType.FLEXRANKED:
-				response = await this.get(
-					`https://lol-web-api.op.gg/api/v1.0/internal/bypass/summoners/${region}/${summ.opggid}/most-champions/rank?game_type=${gameType}&season_id=27`
-				);
-				break;
-			case GameType.ARAM:
-				response = await this.get(
-					`https://lol-web-api.op.gg/api/v1.0/internal/bypass/summoners/${region}/${summ.opggid}/most-champions/aram?game_type=${gameType}&season_id=27`
-				);
-				break;
-			case GameType.NORMAL:
-				response = await this.get(
-					`https://lol-web-api.op.gg/api/v1.0/internal/bypass/games/${region}/summoners/${summ.opggid}?game_type=${gameType}`
-				);
-				break;
+
+		try {
+			// Use appropriate endpoint based on game type
+			switch (gameType) {
+				case GameType.SOLORANKED:
+				case GameType.FLEXRANKED:
+					url = buildOPGGApiUrl(OPGGEndpointPath.CHAMPION_RANKED_STATS, {
+						region: region,
+						summonerId: summ.opggid,
+						gameType: gameType,
+						seasonId: CURRENT_SEASON_ID,
+					});
+					break;
+
+				case GameType.ARAM:
+					url = buildOPGGApiUrl(OPGGEndpointPath.CHAMPION_ARAM_STATS, {
+						region: region,
+						summonerId: summ.opggid,
+						gameType: gameType,
+						seasonId: CURRENT_SEASON_ID,
+					});
+					break;
+
+				case GameType.NORMAL:
+					url = buildOPGGApiUrl(OPGGEndpointPath.CHAMPION_NORMAL_STATS, {
+						region: region,
+						summonerId: summ.opggid,
+						gameType: gameType,
+					});
+					break;
+
+				default:
+					Loggers.get().warn(
+						`Unknown game type: ${gameType}, defaulting to 50% winrate`
+					);
+					return 0.5;
+			}
+			response = await this.get(url);
+
+			const summonnerStats = response.data.data;
+			if (!summonnerStats || !summonnerStats?.champion_stats?.length)
+				return 0.5;
+
+			const championStats = summonnerStats.champion_stats.find(
+				(c: any) => c.id === champion.id
+			);
+
+			if (championStats) return championStats.win / championStats.play;
+			return summonnerStats.win / summonnerStats.play;
+		} catch (error) {
+			Loggers.get().error(
+				`Failed to get winrate for ${summ.wholeGameName} on ${champion.name}: ${error}`
+			);
+			// Return a default 50% winrate if we can't get the actual data
+			return 0.5;
 		}
-		const summonnerStats = response.data.data;
-		if (!summonnerStats || !summonnerStats?.champion_stats?.length) return 0.5;
-		const championStats = summonnerStats.champion_stats.find(
-			(c: any) => c.id === champion.id
-		);
-		if (championStats) return championStats.win / championStats.play;
-		return summonnerStats.win / summonnerStats.play;
 	};
 }

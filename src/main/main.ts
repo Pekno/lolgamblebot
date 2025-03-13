@@ -68,240 +68,241 @@ const simpleBot = new SimpleDiscordBot<LurkersService>(
 );
 
 const simpleCommandsList = new CommandList<LurkersService>();
-simpleCommandsList.push(
-	new Command({
-		name: 'start',
-		description: i18n.__('display.command.start.description'),
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			lurkerService: LurkersService
-		) => {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const lurker = lurkerService.getLurker(interaction);
-			await lurker.start(interaction.channelId);
-			await interaction.editReply(i18n.__('display.command.start.reply'));
-		},
-	})
-);
-simpleCommandsList.push(
-	new Command({
-		name: 'stop',
-		description: i18n.__('display.command.stop.description'),
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			lurkerService: LurkersService
-		) => {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const lurker = lurkerService.getLurker(interaction);
-			await lurker.stop();
-			await interaction.editReply(i18n.__('display.command.stop.reply'));
-		},
-	})
-);
-simpleCommandsList.push(
-	new Command({
-		name: 'add',
-		description: i18n.__('display.command.add.description'),
-		options: [
-			new CommandOption({
-				name: 'summoner_region',
-				description: i18n.__('display.command.add.params.summoner_region'),
-				type: ApplicationCommandOptionType.String,
-				choices: regionOption,
-				required: true,
-			}),
-			new CommandOption({
-				name: 'summoner_name',
-				description: i18n.__('display.command.add.params.summoner_name'),
-				type: ApplicationCommandOptionType.String,
-				required: true,
-			}),
-		],
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			lurkerService: LurkersService
-		) => {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const lurker = lurkerService.getLurker(interaction);
-			const summonerName = interaction.options.getString('summoner_name');
-			const summonerRegion = interaction.options.getString(
-				'summoner_region'
-			) as SpecificRegion;
-			const summ = await lurker.addSummoner(summonerName, summonerRegion);
-			await interaction.editReply(
-				unescapeHTML(
-					i18n.__('display.command.add.reply', {
-						summonerHyperlink: summ?.hyperlink ?? '??',
-					})
-				)
-			);
-		},
-	})
-);
-simpleCommandsList.push(
-	new Command({
-		name: 'remove',
-		description: i18n.__('display.command.remove.description'),
-		options: [
-			new CommandOption({
-				name: 'summoner_region',
-				description: i18n.__('display.command.remove.params.summoner_name'),
-				type: ApplicationCommandOptionType.String,
-				choices: regionOption,
-				required: true,
-			}),
-			new CommandOption({
-				name: 'summoner_name',
-				description: i18n.__('display.command.remove.params.summoner_name'),
-				type: ApplicationCommandOptionType.String,
-				required: true,
-			}),
-		],
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			lurkerService: LurkersService
-		) => {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const lurker = lurkerService.getLurker(interaction);
-			const summonerName = interaction.options.getString('summoner_name');
-			const summonerRegion = interaction.options.getString(
-				'summoner_region'
-			) as SpecificRegion;
-			const summ = lurker.removeSummoner(summonerName, summonerRegion);
-			await interaction.editReply(
-				unescapeHTML(
-					i18n.__('display.command.remove.reply', {
-						summonerHyperlink: summ?.hyperlink ?? '??',
-					})
-				)
-			);
-		},
-	})
-);
-simpleCommandsList.push(
-	new Command({
-		name: 'list',
-		description: i18n.__('display.command.list.description'),
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			lurkerService: LurkersService
-		) => {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const lurker = lurkerService.getLurker(interaction);
-			const summonerText = lurker.getSummonersHyperlink();
-			await interaction.editReply(
-				unescapeHTML(
-					i18n.__('display.command.list.reply', {
-						summonerHyperlink: summonerText,
-					})
-				)
-			);
-		},
-	})
-);
-simpleCommandsList.push(
-	new Command({
-		name: 'scoreboard',
-		description: i18n.__('display.command.scoreboard.description'),
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			lurkerService: LurkersService
-		) => {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const lurker = lurkerService.getLurker(interaction);
-			await interaction.editReply({
-				embeds: [await lurker.buildEmbedScoreboard(client)],
-			});
-		},
-	})
-);
-simpleCommandsList.push(
-	new ButtonCommand({
-		name: 'button_bet',
-		execute: async (
-			interaction: ButtonInteraction,
-			client: Client,
-			lurkerService: LurkersService,
-			extraInfo: any
-		) => {
-			const { side, gameId } = extraInfo;
-			if (!interaction.user.id)
-				throw new LocaleError('error.discord.wrong_userId');
-			const lurker = lurkerService.getLurker(interaction);
-			const currentScore = lurker.checkScore(interaction.user.id);
-
-			const modal = new ModalBuilder()
-				.setCustomId(
-					`bet_modal;side:=${side};gameId:=${gameId};currentScore:=${currentScore}`
-				)
-				.setTitle(
-					i18n.__('display.modal.current', {
-						side: sideToText(+side as Side),
-					})
+simpleCommandsList
+	.push(
+		new Command({
+			name: 'start',
+			description: i18n.__('display.command.start.description'),
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				lurkerService: LurkersService
+			) => {
+				await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+				const lurker = lurkerService.getLurker(interaction);
+				await lurker.start(interaction.channelId);
+				await interaction.editReply(i18n.__('display.command.start.reply'));
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'stop',
+			description: i18n.__('display.command.stop.description'),
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				lurkerService: LurkersService
+			) => {
+				await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+				const lurker = lurkerService.getLurker(interaction);
+				await lurker.stop();
+				await interaction.editReply(i18n.__('display.command.stop.reply'));
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'add',
+			description: i18n.__('display.command.add.description'),
+			options: [
+				new CommandOption({
+					name: 'summoner_region',
+					description: i18n.__('display.command.add.params.summoner_region'),
+					type: ApplicationCommandOptionType.String,
+					choices: regionOption,
+					required: true,
+				}),
+				new CommandOption({
+					name: 'summoner_name',
+					description: i18n.__('display.command.add.params.summoner_name'),
+					type: ApplicationCommandOptionType.String,
+					required: true,
+				}),
+			],
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				lurkerService: LurkersService
+			) => {
+				await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+				const lurker = lurkerService.getLurker(interaction);
+				const summonerName = interaction.options.getString('summoner_name');
+				const summonerRegion = interaction.options.getString(
+					'summoner_region'
+				) as SpecificRegion;
+				const summ = await lurker.addSummoner(summonerName, summonerRegion);
+				await interaction.editReply(
+					unescapeHTML(
+						i18n.__('display.command.add.reply', {
+							summonerHyperlink: summ?.hyperlink ?? '??',
+						})
+					)
 				);
-
-			const favoriteColorInput = new TextInputBuilder()
-				.setCustomId('amount')
-				.setLabel(i18n.__('display.modal.label'))
-				.setPlaceholder(
-					i18n.__('display.modal.current', {
-						amount: `${currentScore} ${CONFIG.CURRENCY}`,
-					})
-				)
-				.setRequired(true)
-				.setStyle(TextInputStyle.Short);
-
-			const firstActionRow =
-				new ActionRowBuilder<TextInputBuilder>().addComponents(
-					favoriteColorInput
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'remove',
+			description: i18n.__('display.command.remove.description'),
+			options: [
+				new CommandOption({
+					name: 'summoner_region',
+					description: i18n.__('display.command.remove.params.summoner_name'),
+					type: ApplicationCommandOptionType.String,
+					choices: regionOption,
+					required: true,
+				}),
+				new CommandOption({
+					name: 'summoner_name',
+					description: i18n.__('display.command.remove.params.summoner_name'),
+					type: ApplicationCommandOptionType.String,
+					required: true,
+				}),
+			],
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				lurkerService: LurkersService
+			) => {
+				await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+				const lurker = lurkerService.getLurker(interaction);
+				const summonerName = interaction.options.getString('summoner_name');
+				const summonerRegion = interaction.options.getString(
+					'summoner_region'
+				) as SpecificRegion;
+				const summ = lurker.removeSummoner(summonerName, summonerRegion);
+				await interaction.editReply(
+					unescapeHTML(
+						i18n.__('display.command.remove.reply', {
+							summonerHyperlink: summ?.hyperlink ?? '??',
+						})
+					)
 				);
-			modal.addComponents(firstActionRow);
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'list',
+			description: i18n.__('display.command.list.description'),
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				lurkerService: LurkersService
+			) => {
+				await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+				const lurker = lurkerService.getLurker(interaction);
+				const summonerText = lurker.getSummonersHyperlink();
+				await interaction.editReply(
+					unescapeHTML(
+						i18n.__('display.command.list.reply', {
+							summonerHyperlink: summonerText,
+						})
+					)
+				);
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'scoreboard',
+			description: i18n.__('display.command.scoreboard.description'),
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				lurkerService: LurkersService
+			) => {
+				await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+				const lurker = lurkerService.getLurker(interaction);
+				await interaction.editReply({
+					embeds: [await lurker.buildEmbedScoreboard(client)],
+				});
+			},
+		})
+	)
+	.push(
+		new ButtonCommand({
+			name: 'button_bet',
+			execute: async (
+				interaction: ButtonInteraction,
+				client: Client,
+				lurkerService: LurkersService,
+				extraInfo: any
+			) => {
+				const { side, gameId } = extraInfo;
+				if (!interaction.user.id)
+					throw new LocaleError('error.discord.wrong_userId');
+				const lurker = lurkerService.getLurker(interaction);
+				const currentScore = lurker.checkScore(interaction.user.id);
 
-			await interaction.showModal(modal);
-		},
-	})
-);
-simpleCommandsList.push(
-	new ModalSubmitCommand({
-		name: 'submit_bet_modal',
-		execute: async (
-			interaction: ModalSubmitInteraction,
-			client: Client,
-			lurkerService: LurkersService,
-			extraInfo: any,
-			modalPayload?: ModalSubmitFields
-		) => {
-			const { side, gameId } = extraInfo;
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			if (!modalPayload) throw new LocaleError('error.lurker.wrong_amount');
-			const amount = +modalPayload.getField('amount').value;
-			const lurker = lurkerService.getLurker(interaction);
-			if (Number.isNaN(amount))
-				throw new LocaleError('error.lurker.wrong_amount', {
-					amount: `${amount}`,
-				});
-			if (amount <= 0)
-				throw new LocaleError('error.lurker.positive_amount', {
-					amount: `${amount}`,
-				});
-			if (!interaction.user.id)
-				throw new LocaleError('error.discord.wrong_userId');
-			const wagerText = await lurker.setBet(
-				+gameId,
-				interaction.user.id,
-				amount,
-				+side as Side
-			);
-			interaction.editReply({ content: wagerText });
-		},
-	})
-);
+				const modal = new ModalBuilder()
+					.setCustomId(
+						`bet_modal;side:=${side};gameId:=${gameId};currentScore:=${currentScore}`
+					)
+					.setTitle(
+						i18n.__('display.modal.current', {
+							side: sideToText(+side as Side),
+						})
+					);
+
+				const favoriteColorInput = new TextInputBuilder()
+					.setCustomId('amount')
+					.setLabel(i18n.__('display.modal.label'))
+					.setPlaceholder(
+						i18n.__('display.modal.current', {
+							amount: `${currentScore} ${CONFIG.CURRENCY}`,
+						})
+					)
+					.setRequired(true)
+					.setStyle(TextInputStyle.Short);
+
+				const firstActionRow =
+					new ActionRowBuilder<TextInputBuilder>().addComponents(
+						favoriteColorInput
+					);
+				modal.addComponents(firstActionRow);
+
+				await interaction.showModal(modal);
+			},
+		})
+	)
+	.push(
+		new ModalSubmitCommand({
+			name: 'submit_bet_modal',
+			execute: async (
+				interaction: ModalSubmitInteraction,
+				client: Client,
+				lurkerService: LurkersService,
+				extraInfo: any,
+				modalPayload?: ModalSubmitFields
+			) => {
+				const { side, gameId } = extraInfo;
+				await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+				if (!modalPayload) throw new LocaleError('error.lurker.wrong_amount');
+				const amount = +modalPayload.getField('amount').value;
+				const lurker = lurkerService.getLurker(interaction);
+				if (Number.isNaN(amount))
+					throw new LocaleError('error.lurker.wrong_amount', {
+						amount: `${amount}`,
+					});
+				if (amount <= 0)
+					throw new LocaleError('error.lurker.positive_amount', {
+						amount: `${amount}`,
+					});
+				if (!interaction.user.id)
+					throw new LocaleError('error.discord.wrong_userId');
+				const wagerText = await lurker.setBet(
+					+gameId,
+					interaction.user.id,
+					amount,
+					+side as Side
+				);
+				interaction.editReply({ content: wagerText });
+			},
+		})
+	);
 
 lurkerService.start().then(() => {
 	simpleBot

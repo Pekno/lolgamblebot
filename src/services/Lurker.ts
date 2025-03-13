@@ -17,6 +17,7 @@ import { SpecificRegion } from '../enum/SpecificRegion';
 import { LurkerStatus } from '../enum/LurkerStatus';
 import { gameModeToType } from '../enum/GameType';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
+import { BatchProcessor } from '../utils/BatchProcessor';
 
 export class Lurker {
 	private _wagerList: Map<number, Wager> = new Map<number, Wager>();
@@ -33,6 +34,10 @@ export class Lurker {
 		(wager: Wager) => Promise<void>
 	>();
 
+	// Batch processors for more efficient API usage
+	private summonerBatchProcessor: BatchProcessor<Summoner>;
+	private wagerBatchProcessor: BatchProcessor<Wager>;
+
 	constructor(
 		guildId: string,
 		riotApi: RiotAPI,
@@ -43,6 +48,23 @@ export class Lurker {
 		this._riotApi = riotApi;
 		this._opggApi = opggApi;
 		this._championList = championList;
+
+		// Initialize batch processors
+		this.summonerBatchProcessor = new BatchProcessor<Summoner>(
+			5, // Process 5 summoners at a time
+			10000, // Every 10 seconds
+			(summoners) => this.processSummonerBatch(summoners),
+			() => this._summoners.filter((s) => !s.currentWager),
+			`Lurker ${this.guildId} - Summoner Processor`
+		);
+
+		this.wagerBatchProcessor = new BatchProcessor<Wager>(
+			5, // Process 5 wagers at a time
+			15000, // Every 15 seconds
+			(wagers) => this.processWagerBatch(wagers),
+			() => Array.from(this._wagerList.values()),
+			`Lurker ${this.guildId} - Wager Processor`
+		);
 	}
 
 	on = (event: string, listener: (wager: Wager) => Promise<void>) => {
@@ -122,6 +144,12 @@ export class Lurker {
 			`Lurker ${this.guildId} : Adding ${compSumm.wholeGameName} to checkList`
 		);
 		this._summoners.push(compSumm);
+
+		// Add the new summoner to the batch processor if it's running
+		if (this.status === LurkerStatus.RUNNING && !compSumm.currentWager) {
+			this.summonerBatchProcessor.addToQueue([compSumm]);
+		}
+
 		if (!byPassSave) this.save();
 		return compSumm;
 	};
@@ -196,6 +224,9 @@ export class Lurker {
 		}
 		this.save();
 		this._wagerList.delete(wager.gameId);
+
+		// Remove from batch processor
+		this.wagerBatchProcessor.removeFromQueue((w) => w.gameId === wager.gameId);
 	};
 
 	checkScore = (userId: string): number => {
@@ -232,7 +263,20 @@ export class Lurker {
 			);
 			throw new LocaleError('error.lurker.no_summoner');
 		}
+
+		const removedSummoner = this._summoners[exactSumm];
 		this._summoners.splice(exactSumm, 1);
+
+		// Remove from batch processor
+		if (this.status === LurkerStatus.RUNNING) {
+			this.summonerBatchProcessor.removeFromQueue(
+				(s) =>
+					s.gameName === removedSummoner.gameName &&
+					s.tagLine === removedSummoner.tagLine &&
+					s.region === removedSummoner.region
+			);
+		}
+
 		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Removing ${summ.wholeGameName} to checkList`
 		);
@@ -240,69 +284,105 @@ export class Lurker {
 		return summ;
 	};
 
-	checkWagersGame = async () => {
-		if (!this.channelId) return;
-		if (this.status !== LurkerStatus.RUNNING) return;
+	/**
+	 * Process a batch of wagers to check if they have ended
+	 * @param wagers Batch of wagers to process
+	 */
+	private processWagerBatch = async (wagers: Wager[]): Promise<void> => {
+		if (!this.channelId || this.status !== LurkerStatus.RUNNING) return;
+
 		Loggers.get(this.guildId).info(
-			`Lurker ${this.guildId} : Checking if one of ${this._wagerList.size} wagers ended`
+			`Lurker ${this.guildId} : Checking batch of ${wagers.length} wagers`
 		);
-		for (const [, wager] of this._wagerList) {
-			const outcome = await this._riotApi.getFinishedGame(
-				wager.region,
-				wager.completeGameId
-			);
-			if (!outcome) return; // Game is not finished
-			wager.isGameFinished = true;
-			wager.outcome = outcome;
-			this.distributeReward(wager);
-			await this.dispatch('endedWager', wager);
-			Loggers.get(this.guildId).info(
-				`Lurker ${this.guildId} : GameId ${wager.completeGameId} ENDED at ${new Date(wager.gameData.gameStartTime + outcome.matchData.info.gameDuration).toLocaleString()}`
-			);
-		}
+
+		// Process each wager in parallel for efficiency
+		await Promise.all(
+			wagers.map(async (wager) => {
+				try {
+					const outcome = await this._riotApi.getFinishedGame(
+						wager.region,
+						wager.completeGameId
+					);
+
+					if (outcome) {
+						wager.isGameFinished = true;
+						wager.outcome = outcome;
+						this.distributeReward(wager);
+						await this.dispatch('endedWager', wager);
+						Loggers.get(this.guildId).info(
+							`Lurker ${this.guildId} : GameId ${wager.completeGameId} ENDED at ${new Date(wager.gameData.gameStartTime + outcome.matchData.info.gameDuration).toLocaleString()}`
+						);
+
+						// Remove this wager from future processing
+						this.wagerBatchProcessor.removeFromQueue(
+							(w) => w.gameId === wager.gameId
+						);
+					}
+				} catch (error) {
+					Loggers.get(this.guildId).error(
+						`Error checking wager ${wager.completeGameId}: ${error}`
+					);
+				}
+			})
+		);
 	};
 
-	checkSummonersGame = async () => {
-		if (!this.channelId) return;
-		if (this.status !== LurkerStatus.RUNNING) return;
-		const notInGameSummoner = this._summoners.filter((s) => !s.currentWager);
+	/**
+	 * Process a batch of summoners to check if they are in a game
+	 * @param summoners Batch of summoners to process
+	 */
+	private processSummonerBatch = async (
+		summoners: Summoner[]
+	): Promise<void> => {
+		if (!this.channelId || this.status !== LurkerStatus.RUNNING) return;
+
 		Loggers.get(this.guildId).info(
-			`Lurker ${this.guildId} : Checking if one of ${notInGameSummoner.length} summoners that are not already in games are playing`
+			`Lurker ${this.guildId} : Checking batch of ${summoners.length} summoners`
 		);
-		for (const summoner of notInGameSummoner) {
-			try {
-				const currentGame = await this._riotApi.getCurrentGame(summoner);
-				if (currentGame) {
-					Loggers.get(this.guildId).info(
-						`Lurker ${this.guildId} : Game Found => ${currentGame.gameId}`
+
+		// Process each summoner in parallel for efficiency
+		await Promise.all(
+			summoners.map(async (summoner) => {
+				try {
+					const currentGame = await this._riotApi.getCurrentGame(summoner);
+					if (currentGame) {
+						Loggers.get(this.guildId).info(
+							`Lurker ${this.guildId} : Game Found => ${currentGame.gameId}`
+						);
+
+						// Skip this game if bet is already created
+						const alreadyListedWager = this._wagerList.get(currentGame.gameId);
+						if (alreadyListedWager) return;
+
+						const newWager = new Wager({
+							gameData: currentGame,
+							participants: [],
+						});
+
+						Loggers.get(this.guildId).info(
+							`Lurker ${this.guildId} : GameId ${newWager.completeGameId} STARTED at ${new Date(currentGame.gameStartTime).toLocaleString()}`
+						);
+						await this.setParticipantsInfo(currentGame.participants, newWager);
+
+						this._wagerList.set(currentGame.gameId, newWager);
+
+						// Add the new wager to the wager batch processor
+						this.wagerBatchProcessor.addToQueue([newWager]);
+
+						await this.dispatch('newWager', newWager);
+						newWager.start(async () => {
+							await this.dispatch('lockedWager', newWager);
+						});
+
+						Loggers.get(this.guildId).info(`Lurker ${this.guildId} :`);
+					}
+				} catch (e: any) {
+					Loggers.get(this.guildId).error(
+						`Error checking summoner ${summoner.wholeGameName}: ${e.message}`
 					);
-
-					// Skip this game if already bet is created
-					const alreadyListedWager = this._wagerList.get(currentGame.gameId);
-					if (alreadyListedWager) return;
-
-					const newWager = new Wager({
-						gameData: currentGame,
-						participants: [],
-					});
-
-					Loggers.get(this.guildId).info(
-						`Lurker ${this.guildId} : GameId ${newWager.completeGameId} STARTED at ${new Date(currentGame.gameStartTime).toLocaleString()}`
-					);
-					await this.setParticipantsInfo(currentGame.participants, newWager);
-
-					this._wagerList.set(currentGame.gameId, newWager);
-					await this.dispatch('newWager', newWager);
-					newWager.start(async () => {
-						await this.dispatch('lockedWager', newWager);
-					});
-
-					Loggers.get(this.guildId).info(`Lurker ${this.guildId} :`);
 				}
-			} catch (e: any) {
-				Loggers.get(this.guildId).error(e, e.stack);
-			}
-		}
+			})
+		);
 	};
 
 	private setParticipantsInfo = async (
@@ -373,6 +453,12 @@ export class Lurker {
 			newWager.bet(bettor.userId, bettor.amount, bettor.side);
 		}
 		this._wagerList.set(newWager.gameId, newWager);
+
+		// Add to batch processor if running
+		if (this.status === LurkerStatus.RUNNING) {
+			this.wagerBatchProcessor.addToQueue([newWager]);
+		}
+
 		await this.dispatch('restoreWager', newWager);
 		newWager.start(async () => {
 			await this.dispatch('lockedWager', newWager);
@@ -382,6 +468,11 @@ export class Lurker {
 	stop = () => {
 		this.channelId = null;
 		this.status = LurkerStatus.STOPPED;
+
+		// Stop the batch processors
+		this.summonerBatchProcessor.stop();
+		this.wagerBatchProcessor.stop();
+
 		this.save();
 	};
 
@@ -409,14 +500,15 @@ export class Lurker {
 		Loggers.get(this.guildId).info(
 			this._summoners.map((s) => s.wholeGameName).join(', ')
 		);
-		await this.checkSummonersGame();
-		setInterval(async () => {
-			Loggers.get(this.guildId).info(
-				`Lurker ${this.guildId} : Scheduled Check`
-			);
-			await this.checkSummonersGame();
-			await this.checkWagersGame();
-		}, 1000 * CONFIG.CHECK_INTERVAL);
+
+		// Initialize and start the batch processors
+		this.summonerBatchProcessor.initialize(
+			this._summoners.filter((s) => !s.currentWager)
+		);
+		this.wagerBatchProcessor.initialize(Array.from(this._wagerList.values()));
+
+		this.summonerBatchProcessor.start();
+		this.wagerBatchProcessor.start();
 
 		this.status = LurkerStatus.RUNNING;
 		this.save();

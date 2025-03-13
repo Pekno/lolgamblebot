@@ -108,43 +108,122 @@ export class Wager {
 		return this.payouts;
 	};
 
+	/**
+	 * Calculate the odds for each side based on team strength, bet distribution, and game time
+	 * @returns A tuple of [redOdds, blueOdds]
+	 */
 	private calculateOdds = (): [number, number] => {
-		const total: any = {};
-		total[Side.BLUE] = 0;
-		total[Side.RED] = 0;
-		const winrate = Math.max(0.01, Math.min(this.opggWinrate, 99.99));
+		// Initialize bet totals for each side
+		const total: Record<Side, number> = {
+			[Side.BLUE]: 0,
+			[Side.RED]: 0,
+		};
 
+		// Calculate total bets for each side
 		for (const [, bet] of this.bettors) {
-			total[bet.side] = bet.amount;
+			total[bet.side] += bet.amount;
 		}
+
+		// Ensure minimum values to avoid division by zero
 		if (total[Side.BLUE] === 0) total[Side.BLUE] = 1;
 		if (total[Side.RED] === 0) total[Side.RED] = 1;
 
-		const blueWinProbability =
-			this.participants[0].side === Side.BLUE ? winrate : 1 - winrate;
-		const redWinProbability = 1 - blueWinProbability;
+		// Calculate team strength factors based on participants
+		const blueTeamParticipants = this.participants.filter(
+			(p) => p.side === Side.BLUE
+		);
+		const redTeamParticipants = this.participants.filter(
+			(p) => p.side === Side.RED
+		);
 
-		const blueOdds = 1 / blueWinProbability;
-		const redOdds = 1 / redWinProbability;
+		// Calculate average winrates for each team
+		const blueTeamWinrate =
+			blueTeamParticipants.length > 0
+				? blueTeamParticipants.reduce((acc, p) => acc + p.opggWinrate, 0) /
+					blueTeamParticipants.length
+				: 0.5;
 
+		const redTeamWinrate =
+			redTeamParticipants.length > 0
+				? redTeamParticipants.reduce((acc, p) => acc + p.opggWinrate, 0) /
+					redTeamParticipants.length
+				: 0.5;
+
+		// Normalize winrates to ensure they sum to 1
+		const totalWinrate = blueTeamWinrate + redTeamWinrate;
+		const normalizedBlueWinrate = blueTeamWinrate / totalWinrate;
+		const normalizedRedWinrate = redTeamWinrate / totalWinrate;
+
+		// Calculate base odds from winrates (inverse of probability)
+		const baseBlueOdds =
+			1 / Math.max(0.1, Math.min(0.9, normalizedBlueWinrate));
+		const baseRedOdds = 1 / Math.max(0.1, Math.min(0.9, normalizedRedWinrate));
+
+		// Calculate bet distribution factors
 		const totalBets = total[Side.BLUE] + total[Side.RED];
 		const blueBetFraction = total[Side.BLUE] / totalBets;
 		const redBetFraction = total[Side.RED] / totalBets;
 
-		const adjustedBlueOdds = Math.min(blueOdds * (1 + redBetFraction), 3);
-		const adjustedRedOdds = Math.min(redOdds * (1 + blueBetFraction), 3);
+		// Adjust odds based on bet distribution to incentivize balanced betting
+		// More bets on one side = better odds for the other side
+		const betDistributionFactor = 0.5; // How much bet distribution affects odds (0-1)
 
-		return [adjustedRedOdds, adjustedBlueOdds];
+		const adjustedBlueOdds =
+			baseBlueOdds * (1 + redBetFraction * betDistributionFactor);
+		const adjustedRedOdds =
+			baseRedOdds * (1 + blueBetFraction * betDistributionFactor);
+
+		// Apply game time factor - early game has more uncertainty
+		let gameTimeFactor = 1.0;
+		if (this.gameData.gameLength < 300) {
+			// Less than 5 minutes
+			gameTimeFactor = 1.2; // Higher odds (more uncertainty) in early game
+		} else if (this.gameData.gameLength < 900) {
+			// Less than 15 minutes
+			gameTimeFactor = 1.1;
+		}
+
+		// Apply caps to prevent extreme odds
+		const maxOdds = 5.0;
+		const minOdds = 1.1;
+
+		const finalBlueOdds = Math.min(
+			maxOdds,
+			Math.max(minOdds, adjustedBlueOdds * gameTimeFactor)
+		);
+		const finalRedOdds = Math.min(
+			maxOdds,
+			Math.max(minOdds, adjustedRedOdds * gameTimeFactor)
+		);
+
+		return [finalRedOdds, finalBlueOdds];
 	};
 
+	/**
+	 * Calculate payouts for all bettors based on the outcome and odds
+	 * @param odds The calculated odds for each side [redOdds, blueOdds]
+	 * @returns Array of payouts for each bettor
+	 */
 	private getPayouts = (odds: [number, number]): Payout[] => {
 		const winningSide = this.outcome.victorySide;
 		const payouts: Payout[] = [];
+
+		// Apply a small house edge to ensure long-term sustainability
+		const houseEdge = 0.05; // 5% house edge
+
 		for (const [userId, bet] of this.bettors) {
 			if (bet.side === winningSide) {
-				const payout =
+				// Calculate raw payout
+				const rawPayout =
 					bet.amount * (winningSide === Side.RED ? odds[0] : odds[1]);
-				payouts.push({ userId: userId, amount: Math.trunc(payout) });
+
+				// Apply house edge
+				const adjustedPayout = rawPayout * (1 - houseEdge);
+
+				payouts.push({
+					userId: userId,
+					amount: Math.trunc(adjustedPayout),
+				});
 			} else {
 				payouts.push({ userId: userId, amount: 0 });
 			}
