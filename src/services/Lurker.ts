@@ -18,6 +18,7 @@ import { LurkerStatus } from '../enum/LurkerStatus';
 import { gameModeToType } from '../enum/GameType';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 import { BatchProcessor } from '../utils/BatchProcessor';
+import { Container } from '../utils/Container';
 
 export class Lurker {
 	private _wagerList: Map<number, Wager> = new Map<number, Wager>();
@@ -26,8 +27,6 @@ export class Lurker {
 	channelId: string | null;
 	status: LurkerStatus = LurkerStatus.CREATED;
 	private _summoners: Summoner[] = [];
-	private _riotApi: RiotAPI;
-	private _opggApi: OPGGApi;
 	private _championList: RiotChampion[];
 	private _events: Map<string, (wager: Wager) => Promise<void>> = new Map<
 		string,
@@ -38,15 +37,8 @@ export class Lurker {
 	private summonerBatchProcessor: BatchProcessor<Summoner>;
 	private wagerBatchProcessor: BatchProcessor<Wager>;
 
-	constructor(
-		guildId: string,
-		riotApi: RiotAPI,
-		opggApi: OPGGApi,
-		championList: RiotChampion[]
-	) {
+	constructor(guildId: string, championList: RiotChampion[]) {
 		this.guildId = guildId;
-		this._riotApi = riotApi;
-		this._opggApi = opggApi;
 		this._championList = championList;
 
 		// Initialize batch processors
@@ -116,7 +108,7 @@ export class Lurker {
 		byPassSave: boolean = false
 	): Promise<Summoner | null> => {
 		if (!summonerName) throw new LocaleError('error.lurker.no_summoner');
-		const summ = this._riotApi.cleanupSummonerName(
+		const summ = Container.get(RiotAPI).cleanupSummonerName(
 			summonerName,
 			summonerRegion
 		);
@@ -127,7 +119,7 @@ export class Lurker {
 				s.region === summ.region
 		);
 		if (exactSumm !== -1) throw new LocaleError('error.lurker.summoner_exists');
-		const summFromOnline = await this._riotApi.getSummonerInfo(
+		const summFromOnline = await Container.get(RiotAPI).getSummonerInfo(
 			summ,
 			summonerRegion
 		);
@@ -138,7 +130,8 @@ export class Lurker {
 			);
 			return summFromOnline;
 		}
-		const compSumm = await this._opggApi.getSummonerInfo(summFromOnline);
+		const compSumm =
+			await Container.get(OPGGApi).getSummonerInfo(summFromOnline);
 		if (!compSumm) throw new LocaleError('error.opgg.no_summoner');
 		Loggers.get(this.guildId).info(
 			`Lurker ${this.guildId} : Adding ${compSumm.wholeGameName} to checkList`
@@ -247,7 +240,7 @@ export class Lurker {
 		summonerRegion: SpecificRegion
 	): Summoner | null => {
 		if (!summonerName) throw new LocaleError('error.lurker.no_summoner');
-		const summ = this._riotApi.cleanupSummonerName(
+		const summ = Container.get(RiotAPI).cleanupSummonerName(
 			summonerName,
 			summonerRegion
 		);
@@ -299,7 +292,7 @@ export class Lurker {
 		await Promise.all(
 			wagers.map(async (wager) => {
 				try {
-					const outcome = await this._riotApi.getFinishedGame(
+					const outcome = await Container.get(RiotAPI).getFinishedGame(
 						wager.region,
 						wager.completeGameId
 					);
@@ -344,7 +337,8 @@ export class Lurker {
 		await Promise.all(
 			summoners.map(async (summoner) => {
 				try {
-					const currentGame = await this._riotApi.getCurrentGame(summoner);
+					const currentGame =
+						await Container.get(RiotAPI).getCurrentGame(summoner);
 					if (currentGame) {
 						Loggers.get(this.guildId).info(
 							`Lurker ${this.guildId} : Game Found => ${currentGame.gameId}`
@@ -401,7 +395,7 @@ export class Lurker {
 			);
 			if (!summChampion) continue; // Cannot find summoner's current champion
 
-			const winrate = await this._opggApi.getWinrateByGameType(
+			const winrate = await Container.get(OPGGApi).getWinrateByGameType(
 				participatingSummoner,
 				gameModeToType(wager.gameData.gameMode),
 				summChampion

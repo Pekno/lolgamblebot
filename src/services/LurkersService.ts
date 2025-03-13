@@ -10,17 +10,18 @@ import { sideToText } from '../enum/Side';
 import i18n from 'i18n';
 import { Client, Interaction, TextChannel } from 'discord.js';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
+import { Container } from '../utils/Container';
 
 export class LurkersService {
 	private _lurkers: Map<string, Lurker> = new Map<string, Lurker>();
-	private _riotApi: RiotAPI;
-	private _opggApi: OPGGApi;
 	private _client: Client;
 	private _championList: RiotChampion[] = [];
 
 	start = async () => {
 		// Getting updated champion list
-		this._championList = await this._opggApi.getChampionList(CONFIG.LOCALE);
+		this._championList = await Container.get(OPGGApi).getChampionList(
+			CONFIG.LOCALE
+		);
 		if (!this._championList?.length)
 			throw new LocaleError('error.opgg.no_champions_list');
 		Loggers.get().info(
@@ -83,12 +84,7 @@ export class LurkersService {
 
 	private createAndBindLurker = (guildId: string): Lurker => {
 		Loggers.get().info(`Bot : Creating new lurker for guildId : ${guildId}`);
-		const lurker = new Lurker(
-			guildId,
-			this._riotApi,
-			this._opggApi,
-			this._championList
-		);
+		const lurker = new Lurker(guildId, this._championList);
 
 		lurker.on('newWager', async (wager) => {
 			const channel = await this.getChannel(lurker);
@@ -173,13 +169,19 @@ export class LurkersService {
 
 	constructor() {
 		if (!CONFIG.RIOT_API_KEY) throw new LocaleError('error.riot.no_api_key');
-		this._riotApi = new RiotAPI(
+
+		// Create instances with proper configuration
+		const riotApi = new RiotAPI(
 			{ 'X-Riot-Token': CONFIG.RIOT_API_KEY },
 			CONFIG.RIOT_API_LIMIT_BY_MINUTES
 		);
-		this._opggApi = new OPGGApi();
+		const opggApi = new OPGGApi();
 		if (!fs.existsSync(CONFIG.SAVED_DATA_PATH)) {
 			fs.mkdirSync(CONFIG.SAVED_DATA_PATH, { recursive: true });
 		}
+
+		// Register them in the container
+		Container.register(riotApi);
+		Container.register(opggApi);
 	}
 }
