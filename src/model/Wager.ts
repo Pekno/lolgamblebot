@@ -242,7 +242,11 @@ export class Wager {
 	};
 
 	buildButton = (): ActionRowBuilder<ButtonBuilder> => {
-		const total: any = {};
+		const total: Record<Side, number> = {
+			[Side.BLUE]: 0,
+			[Side.RED]: 0,
+		};
+
 		total[Side.BLUE] = 0;
 		total[Side.RED] = 0;
 		for (const [, bet] of this.bettors) {
